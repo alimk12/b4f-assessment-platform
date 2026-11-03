@@ -1,0 +1,8 @@
+.auth-page { min-height: calc(100vh - 56px); display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
+.auth-card { width: 100%; max-width: 400px; }
+.auth-card__title { margin-bottom: 0.25rem; }
+.auth-card__subtitle { color: var(--color-text-muted); margin-bottom: 1.25rem; }
+.auth-card__submit { width: 100%; margin-top: 0.25rem; }
+.auth-card__footer { margin-top: 1rem; text-align: center; font-size: 0.9rem; color: var(--color-text-muted); }
+.auth-card__field-error { color: var(--color-error); font-size: 0.8rem; margin-top: 0.25rem; }
+.auth-card__demo { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed var(--color-border); font-size: 0.8rem; color: var(--color-text-muted); }

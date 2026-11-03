@@ -1,0 +1,9 @@
+.test-mgmt__list { display: grid; gap: 0.9rem; }
+.test-mgmt-row { display: grid; grid-template-columns: 2.5rem 1fr auto; gap: 1rem; align-items: center; }
+.test-mgmt-row__order { width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary); font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.test-mgmt-row__title { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.2rem; }
+.test-mgmt-row__meta { color: var(--color-text-muted); font-size: 0.85rem; }
+.test-mgmt-row__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
+.test-mgmt-row__error { grid-column: 2 / -1; color: var(--color-error); font-size: 0.85rem; }
+.test-mgmt-row__lock { color: var(--color-warning); font-size: 0.8rem; font-weight: 600; }
+@media (max-width: 700px) { .test-mgmt-row { grid-template-columns: 1fr; } .test-mgmt-row__actions { justify-content: flex-start; } }

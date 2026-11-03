@@ -1,0 +1,56 @@
+.attempt { min-height: 100vh; background: var(--color-bg); display: flex; flex-direction: column; }
+.attempt__header { background: var(--color-dark); color: var(--color-on-dark); padding: 0.6rem 1rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; position: sticky; top: 0; z-index: 20; }
+.attempt__title { font-weight: 700; flex: 1; }
+.attempt__body { flex: 1; padding: 1.25rem 1rem 3rem; max-width: 1500px; width: 100%; margin: 0 auto; }
+.attempt__body--narrow { max-width: 860px; }
+.attempt__integrity { font-size: 0.8rem; background: rgba(255, 255, 255, 0.08); border-radius: var(--radius); padding: 0.25rem 0.6rem; }
+.attempt__integrity--hot { background: var(--color-warning); color: var(--color-on-dark); }
+.attempt__timeup { background: var(--color-error-light); color: var(--color-error); border: 1px solid var(--color-error); border-radius: var(--radius); padding: 0.7rem 1rem; font-weight: 700; margin-bottom: 1rem; }
+.attempt__notice { background: var(--color-warning-light); color: var(--color-warning); border: 1px solid var(--color-warning); border-radius: var(--radius); padding: 0.5rem 0.9rem; font-size: 0.88rem; margin-bottom: 1rem; }
+.attempt__notice--real { background: var(--color-success-light); color: var(--color-success); border-color: var(--color-success); }
+.attempt__mcq-list { display: grid; gap: 1rem; }
+.attempt__question-head { display: flex; justify-content: space-between; gap: 1rem; margin-bottom: 0.6rem; }
+.attempt__question-text { font-weight: 600; font-size: 1.02rem; }
+.attempt__save { font-size: 0.75rem; white-space: nowrap; color: var(--color-text-muted); }
+.attempt__save--saved { color: var(--color-success); }
+.attempt__save--failed { color: var(--color-error); font-weight: 700; }
+.attempt__option { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0.75rem; border: 1px solid var(--color-border); border-radius: var(--radius); margin-bottom: 0.45rem; cursor: pointer; font-weight: 400; user-select: none; }
+.attempt__option:hover { background: var(--color-bg); }
+.attempt__option--selected { border-color: var(--color-primary); background: var(--color-primary-light); }
+.attempt__option input { width: auto; margin: 0; }
+.attempt__footer { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 1.25rem; position: sticky; bottom: 0; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 0.75rem 1rem; box-shadow: var(--shadow); }
+.attempt__coding { display: grid; grid-template-columns: 240px 1fr; gap: 1rem; align-items: start; }
+@media (max-width: 900px) { .attempt__coding { grid-template-columns: 1fr; } }
+.attempt__sidebar { display: grid; gap: 0.5rem; }
+.attempt__problem-btn { text-align: left; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 0.7rem 0.8rem; cursor: pointer; }
+.attempt__problem-btn--active { border-color: var(--color-primary); background: var(--color-primary-light); }
+.attempt__problem-btn-title { font-weight: 700; display: block; }
+.attempt__problem-btn-state { font-size: 0.78rem; color: var(--color-text-muted); }
+.attempt__problem-btn-state--done { color: var(--color-success); font-weight: 700; }
+.attempt__panel { display: grid; grid-template-columns: minmax(280px, 2fr) 3fr; gap: 1rem; align-items: start; }
+@media (max-width: 1200px) { .attempt__panel { grid-template-columns: 1fr; } }
+.attempt__desc { white-space: pre-wrap; }
+.attempt__sample { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 0.6rem 0.8rem; font-family: var(--font-mono); font-size: 0.85rem; margin-top: 0.75rem; overflow-x: auto; }
+.attempt__sample-label { font-family: var(--font-sans); font-size: 0.75rem; text-transform: uppercase; color: var(--color-text-muted); font-weight: 700; }
+.attempt__actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin: 0.75rem 0; }
+.attempt__runs { font-size: 0.82rem; color: var(--color-text-muted); }
+.attempt__output { background: var(--color-code-bg); color: var(--color-on-dark); border-radius: var(--radius); padding: 0.9rem 1rem; font-family: var(--font-mono); font-size: 0.85rem; }
+.attempt__output-status { font-family: var(--font-sans); font-weight: 800; font-size: 0.95rem; margin-bottom: 0.25rem; }
+.attempt__output-status--ok { color: var(--color-success); }
+.attempt__output-status--bad { color: var(--color-error); }
+.attempt__output-status--mock { color: var(--color-warning); }
+.attempt__output-msg { font-family: var(--font-sans); opacity: 0.9; margin-bottom: 0.6rem; }
+.attempt__output-row { display: grid; grid-template-columns: 7.5rem 1fr; gap: 0.5rem; padding: 0.15rem 0; }
+.attempt__output-key { opacity: 0.6; }
+.attempt__output-err { color: var(--color-error-light); background: rgba(220, 38, 38, 0.18); border-radius: 4px; padding: 0.4rem 0.6rem; margin: 0.4rem 0; white-space: pre-wrap; }
+.attempt__console { border-top: 1px solid rgba(255, 255, 255, 0.15); margin-top: 0.6rem; padding-top: 0.5rem; white-space: pre-wrap; max-height: 160px; overflow-y: auto; }
+.attempt__output-empty { opacity: 0.6; font-family: var(--font-sans); }
+.attempt__submit-box { border: 1px solid var(--color-success); background: var(--color-success-light); color: var(--color-success); border-radius: var(--radius); padding: 0.6rem 0.9rem; font-weight: 700; margin-top: 0.75rem; }
+.attempt__result { text-align: center; padding: 2.5rem 1.5rem; }
+.attempt__result--terminated { border-top: 8px solid var(--color-terminated); }
+.attempt__result-score { font-size: 3.2rem; font-weight: 900; color: var(--color-primary); line-height: 1.1; margin: 0.5rem 0; }
+.attempt__result--terminated .attempt__result-score { color: var(--color-terminated); }
+.attempt__result-label { font-weight: 700; margin-bottom: 0.75rem; }
+.attempt__result-reason { background: var(--color-error-light); color: var(--color-terminated); border-radius: var(--radius); padding: 0.6rem 0.9rem; margin: 0.75rem auto; max-width: 520px; font-weight: 600; }
+.attempt__result-problems { max-width: 520px; margin: 1rem auto; text-align: left; }
+.attempt__session { max-width: 520px; margin: 4rem auto; text-align: center; }

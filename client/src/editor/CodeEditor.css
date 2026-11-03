@@ -1,0 +1,2 @@
+.code-editor { border: 1px solid var(--color-dark); border-radius: var(--radius); overflow: hidden; background: var(--color-code-bg); }
+.code-editor__bar { background: var(--color-dark); color: var(--color-on-dark); font-size: 0.75rem; padding: 0.35rem 0.75rem; display: flex; justify-content: space-between; opacity: 0.95; }

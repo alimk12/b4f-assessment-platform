@@ -1,0 +1,12 @@
+.my-tests__list { display: grid; gap: 1rem; }
+.my-tests-card { display: grid; grid-template-columns: 3rem 1fr auto; gap: 1rem; align-items: center; }
+.my-tests-card--locked { opacity: 0.7; }
+.my-tests-card__step { width: 2.6rem; height: 2.6rem; border-radius: 50%; background: var(--color-primary-light); color: var(--color-primary); font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+.my-tests-card--locked .my-tests-card__step { background: var(--color-bg); color: var(--color-text-muted); }
+.my-tests-card__title { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.2rem; }
+.my-tests-card__meta { color: var(--color-text-muted); font-size: 0.88rem; }
+.my-tests-card__note { font-size: 0.88rem; margin-top: 0.25rem; }
+.my-tests-card__note--terminated { color: var(--color-terminated); font-weight: 700; }
+.my-tests-card__score { font-size: 1.4rem; font-weight: 800; text-align: right; }
+.my-tests-card__error { grid-column: 2 / -1; color: var(--color-error); font-size: 0.85rem; }
+@media (max-width: 640px) { .my-tests-card { grid-template-columns: 1fr; } .my-tests-card__score { text-align: left; } }

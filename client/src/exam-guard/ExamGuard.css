@@ -1,0 +1,6 @@
+.exam-guard-gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--color-dark); color: var(--color-on-dark); padding: 1rem; }
+.exam-guard-gate__box { max-width: 440px; text-align: center; }
+.exam-guard-gate__icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.exam-guard-gate__text { opacity: 0.85; margin-bottom: 1.25rem; }
+.exam-guard-dialog { border-top: 6px solid var(--color-warning); }
+.exam-guard-dialog__title { color: var(--color-warning); }
