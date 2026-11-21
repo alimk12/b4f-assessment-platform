@@ -28,7 +28,10 @@ export default function MyResultsPage() {
                   <td><StateBadge state={r.status} /></td>
                   <td>
                     <span className="my-results__score">{formatScore(r.score)}</span>
-                    <span className={`my-results__label${r.status === 'TERMINATED' ? ' my-results__label--terminated' : ''}`}>{r.label}</span>
+                    {/* The label only adds information when it differs from the score (e.g. "Terminated — …"). */}
+                    {r.label !== formatScore(r.score) && (
+                      <span className={`my-results__label${r.status === 'TERMINATED' ? ' my-results__label--terminated' : ''}`}>{r.label}</span>
+                    )}
                   </td>
                   <td>{formatDateTime(r.terminatedAt ?? r.submittedAt)}</td>
                 </tr>
