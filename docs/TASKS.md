@@ -1400,3 +1400,231 @@ The project is complete only when:
 - a README that works on a clean checkout
 - the full test passed and the demo works without manual fixes
 - every member understands the whole project and speaks in the English presentation
+
+---
+
+# 19. Alpha Changes — Many Cities, Cohorts and Instructors
+
+The first version serves **one** group of students with **three** fixed tests. B4F runs a different cohort in every Syrian city, so Alpha turns the platform into a multi-cohort platform. Every member keeps their old tasks and file ownership; this section **adds** to them.
+
+> Alpha is a change to the original specification. Ali gets the instructor's written approval **before** any Alpha PR is merged, the same way as for exam integrity (`PROJECT-STRUCTURE.md`, section 3).
+
+## 19.1 What Alpha adds
+
+| # | Change | Short description |
+| --- | --- | --- |
+| A-1 | Cohorts | A cohort (for example `Cohort 9 — Salamiyah`) belongs to a city and has a **join code**. Every student belongs to one cohort. Every test belongs to one cohort. |
+| A-2 | New cohort from the bank | When a cohort is created, its three tests can be copied (as `DRAFT`, fully editable) from any existing cohort. |
+| A-3 | Archive | An archived cohort is hidden from students and closed for new sign-ups. Its results stay forever. |
+| A-4 | Cohort filter | The instructor sees only the attempts of their own cohorts and filters by cohort. |
+| A-5 | Docs | `API.md`, `PROJECT-STRUCTURE.md` and this file describe Alpha before any code is merged. |
+| A-6 | Device switch limit | Opening a running exam on another device (or window) is allowed **2 times**. Each switch sends a **danger** alert to the instructor. The **3rd** switch ends the exam (`TERMINATED`, scored from what was saved). |
+| A-7 | Instructor alerts | A permanent alerts page: **danger** (device switch, exam terminated) and **warning** (full screen exit, tab hidden, copy / cut / paste / drop). Unread count in the navbar. Alerts are never deleted, only marked as read. |
+| A-8 | Violation summary | Every attempt keeps a permanent summary (device switches x/2, focus x/2, clipboard x/3) and the full log, visible after the exam ends. The attempts table marks attempts with a device switch in red. |
+| A-9 | One sign-in per student | A new student sign-in signs out every other device of that student. Instructors and admins may stay signed in on several devices. |
+| A-10 | Admin, instructors and cohorts | A new `ADMIN` role creates cities, cohorts and instructor accounts and links instructors to cohorts. An instructor can have several cohorts; a cohort can have several instructors. |
+| A-11 | Student accounts | Students sign up with the join code **or** the instructor creates them. The instructor can edit, disable / enable, reset the password, and sign a student out everywhere — only inside their own cohorts. |
+| A-12 | Shared question bank | Every instructor can read the tests of **every** cohort in every city and copy a question, a problem or a whole test into their own unlocked test. The original never changes. |
+
+What does **not** change: one attempt per student per test, the server clock and the 10-second grace, `EXPIRED` is `null`, the content lock after the first attempt (R-4, now per cohort test), shuffled order, the focus and clipboard rules, Run / Submit limits, mock and Judge0 execution, no WebSockets, no CDN.
+
+## 19.2 Fixed contract (Ali copies it into `API.md` in Part A)
+
+These names are fixed so everyone can work in parallel. A change needs the team lead. The full contract (shapes, bodies, every error message) is `API.md`, section 20; where the two differ, `API.md` wins.
+
+### Data (Esmaeel, one migration named `alpha_cohorts`)
+
+```text
+enum Role            ADMIN | INSTRUCTOR | STUDENT
+enum CohortStatus    ACTIVE | ARCHIVED
+enum ViolationType   + DEVICE_SWITCH            (NEW_SESSION stays for old rows only)
+enum AlertSeverity   DANGER | WARNING
+enum AlertType       DEVICE_SWITCH | FULLSCREEN_EXIT | TAB_HIDDEN | COPY | CUT | PASTE_EXTERNAL | DROP_EXTERNAL | ATTEMPT_TERMINATED
+
+City              id, name (unique), createdAt                                   @@map("cities")
+Cohort            id, name, cityId → City (Restrict), joinCode (unique), status (ACTIVE),
+                  createdAt, archivedAt?                                         @@unique([cityId, name]) @@map("cohorts")
+CohortInstructor  cohortId → Cohort (Cascade), userId → User (Cascade), createdAt @@id([cohortId, userId]) @@map("cohort_instructors")
+UserSession       id, userId → User (Cascade), createdAt, lastSeenAt, revokedAt?, revokeReason?   @@map("user_sessions")
+Alert             id, cohortId → Cohort (Cascade), attemptId → Attempt (Cascade), studentId → User,
+                  type AlertType, severity AlertSeverity, message, createdAt,
+                  readAt?, readById? → User (SetNull)                            @@index([cohortId, readAt]) @@map("alerts")
+
+User   + cohortId? → Cohort (Restrict)   (students only; null for admin and instructors)
+       + isActive Boolean @default(true)
+Test   + cohortId → Cohort (Restrict)
+       + sourceTestId? (the bank test it was copied from, for information only)
+       order: @unique  →  @@unique([cohortId, order])
+```
+
+**Existing data:** the migration creates the city `Salamiyah` and the cohort `Cohort 8 — Salamiyah`, and moves every existing test and student into it, and links every existing instructor to it. Nobody loses an attempt.
+
+### Limits and messages (Esmaeel, `common/constants.ts`)
+
+```text
+DEVICE_SWITCH_ALLOWED = 2        (the 3rd switch terminates)
+ALERTS_POLL_SECONDS   = 15       (frontend refresh of the unread count)
+JOIN_CODE             = 8 characters, A–Z and 2–9, no 0/O/1/I   e.g. K7QM4XRT
+```
+
+| Situation | Status | Message |
+| --- | --- | --- |
+| Join code unknown | 400 | `This cohort code is not valid.` |
+| Join code of an archived cohort | 400 | `This cohort is closed for new sign-ups.` |
+| Sign-in to a disabled account (after the password is correct) | 403 | `This account is disabled. Please contact your instructor.` |
+| Token of a session ended by a newer sign-in | 401 | `You were signed out because your account was used on another device.` |
+| Token of a session ended by the instructor, or account disabled | 401 | `You were signed out. Please sign in again.` |
+| Instructor uses a cohort that is not theirs | 403 | `You do not have access to this cohort.` |
+| Copy into a locked test | 409 | (the existing R-4 message) |
+| Copy between different test types | 400 | `You can only copy into a test of the same type.` |
+| Device switch 1 | warning | `This exam was opened on another device. Device change 1 of 2. A third change ends your exam.` |
+| Device switch 2 | warning | `This exam was opened on another device. Device change 2 of 2. The next change ends your exam.` |
+| Device switch 3 → `terminationReason` | — | `Opened the exam on another device 3 times.` |
+
+### Endpoints
+
+| Method | Endpoint | Purpose | Role | Backend owner |
+| --- | --- | --- | --- | --- |
+| POST | `/auth/register` | + `joinCode` (required) | public | Esmaeel |
+| POST | `/auth/login` | + single session for students, `isActive` check | public | Esmaeel |
+| GET | `/auth/me` | + `cohort` (student) or `cohorts` (instructor) | any | Esmaeel |
+| POST | `/auth/logout` | End the current session (`204`) | any | Esmaeel |
+| GET / POST | `/admin/cities` | List / create cities | ADMIN | Majed |
+| GET / POST | `/admin/cohorts` | List (`?cityId=&status=`) / create (`{ name, cityId, copyFromCohortId? }`) | ADMIN | Majed |
+| PATCH | `/admin/cohorts/:cohortId/archive` | Archive a cohort | ADMIN | Majed |
+| POST | `/admin/cohorts/:cohortId/join-code` | Make a new join code | ADMIN | Majed |
+| GET / POST | `/admin/instructors` | List / create instructor accounts | ADMIN | Majed |
+| PATCH | `/admin/instructors/:userId` | Edit name, enable / disable | ADMIN | Majed |
+| POST / DELETE | `/admin/cohorts/:cohortId/instructors/:userId` | Link / unlink an instructor | ADMIN | Majed |
+| GET | `/instructor/cohorts` | My cohorts (with join codes) | INSTRUCTOR | Majed |
+| GET | `/instructor/tests?cohortId=` | The three tests **of this cohort** | INSTRUCTOR | Majed |
+| GET | `/instructor/bank/tests?cityId=&cohortId=&type=&search=&page=&limit=` | Tests of every cohort (read-only), paginated | INSTRUCTOR | Majed |
+| GET | `/instructor/bank/tests/:testId` | One bank test with full content | INSTRUCTOR | Majed |
+| POST | `/instructor/tests/:testId/copy-from` | `{ sourceTestId }` — copy all content | INSTRUCTOR | Majed |
+| POST | `/instructor/tests/:testId/questions/copy` | `{ sourceQuestionId }` | INSTRUCTOR | Majed |
+| POST | `/instructor/tests/:testId/problems/copy` | `{ sourceProblemId }` | INSTRUCTOR | Majed |
+| GET / POST | `/instructor/cohorts/:cohortId/students` | List (`?search=&page=&limit=`) / create a student | INSTRUCTOR | Rami |
+| PATCH | `/instructor/students/:userId` | Edit name / email, enable / disable | INSTRUCTOR | Rami |
+| POST | `/instructor/students/:userId/reset-password` | `{ newPassword }` | INSTRUCTOR | Rami |
+| POST | `/instructor/students/:userId/sign-out` | End every session of the student | INSTRUCTOR | Rami |
+| GET | `/instructor/attempts?cohortId=&testId=&status=&search=` | + required `cohortId`, + `deviceSwitchCount` per row | INSTRUCTOR | Esmaeel |
+| GET | `/instructor/attempts/:attemptId` | + `violationSummary` | INSTRUCTOR | Esmaeel |
+| GET | `/instructor/alerts?cohortId=&severity=&unread=&page=&limit=` | Alerts, newest first | INSTRUCTOR | Esmaeel |
+| GET | `/instructor/alerts/unread-count?cohortId=` | `{ count, dangerCount }` | INSTRUCTOR | Esmaeel |
+| PATCH | `/instructor/alerts/:alertId/read` | Mark one as read | INSTRUCTOR | Esmaeel |
+| PATCH | `/instructor/alerts/read-all?cohortId=` | Mark all as read | INSTRUCTOR | Esmaeel |
+
+Alerts are shared by the cohort: when one instructor of the cohort marks an alert as read, it is read for every instructor of that cohort (`readById` shows who).
+
+All existing instructor endpoints that take a `testId`, `questionId`, `problemId` or `attemptId` also check that it belongs to one of the caller's cohorts (`403`). `ADMIN` passes every cohort check.
+
+```json
+"violationSummary": {
+  "device":    { "count": 2, "allowed": 2 },
+  "focus":     { "count": 1, "limit": 2 },
+  "clipboard": { "count": 0, "limit": 3 }
+}
+```
+
+### How a device switch works (A-6 + A-9)
+
+1. `POST /student/tests/:testId/attempts` on an attempt that is already `IN_PROGRESS` = a **resume** = a device switch. (The server cannot tell a new device from a closed tab on the same device. A refresh in the same tab keeps `sessionStorage` and is **not** a switch.)
+2. In the start transaction, Rami calls `integrityService.issueSessionKey(tx, attemptId, true)`. Esmaeel stores a counted `DEVICE_SWITCH` violation, creates a `DANGER` alert, and on the 3rd switch terminates the attempt with `ScoringService`.
+3. The start response gets `deviceWarning` (the fixed warning, or `null`). If the switch terminated the attempt, the response is the finished attempt with its terminated result.
+4. A new student sign-in revokes the older sessions (A-9). The old device gets `401` on its next request and goes to `/sign-in` with the message. It is not a violation by itself; it becomes one only if the student then opens the running exam again (step 1).
+
+## 19.3 Who does what
+
+| Member | Alpha work | Estimate |
+| --- | --- | --- |
+| Ali | Contract (first), auth screens, admin screens, cohort switcher, alerts page, attempts changes, `api-flow.mjs`, review | ~14 h |
+| Maya | Student-side warnings, Students page, Question bank page | ~12 h |
+| Esmaeel | Schema + migration (first), auth sessions and roles, cohort access helper, device rule, alerts, attempts scope, seed | ~15 h |
+| Majed | Admin module (cities, cohorts, instructors), cohort tests, copy from bank, question bank | ~13 h |
+| Rami | Student flow per cohort, device switch in start, instructor student-management module | ~11 h |
+
+### Ali — contract, auth, admin and instructor screens
+
+**New files:** `client/src/pages/admin/` (`CitiesPage`, `CohortsPage`, `InstructorsPage`), `client/src/pages/instructor/Alerts/`, `client/src/context/CohortContext.tsx`, `client/src/context/AlertsContext.tsx`, `client/src/context/AdminContext.tsx`, `client/src/services/admin.api.ts`, `client/src/services/alerts.api.ts`, `client/src/types/admin.types.ts`, `client/src/types/alert.types.ts`, `client/src/types/cohort.types.ts`. CSS prefixes `admin-`, `alerts-`, `cohort-`. Full list: `PROJECT-STRUCTURE.md`, section 17.9.
+
+- **Part A — Contract (first, Day 1 morning):** ✅ written: `API.md` section 20, `PROJECT-STRUCTURE.md` section 17, and `CODEOWNERS`. Ali reviews them with the team at the start of Day 1 and merges them before anyone else's Alpha PR.
+- **Part B — Auth:** join code field on Sign up; `http.ts` shows the two sign-out messages from 19.2 on `/sign-in` after a `401`; `RequireRole` accepts `ADMIN`; `/` sends `ADMIN` to `/admin/cohorts`.
+- **Part C — Admin screens:** cities list + add; cohorts list (filter by city and status) + create (with "copy tests from cohort" select) + archive (with `ConfirmDialog`) + new join code; instructors list + create + enable / disable + link / unlink cohorts.
+- **Part D — Cohort switcher:** `CohortContext` loads `GET /instructor/cohorts`, keeps the selected cohort in `localStorage`, shows a select in the navbar. Test Management, Test Editor and Attempts use the selected `cohortId`.
+- **Part E — Alerts page** (`/instructor/alerts`): danger rows in red, warning rows in orange; filters (severity, unread); mark one / all as read; each row links to the attempt details. `AlertsContext` polls `unread-count` every `ALERTS_POLL_SECONDS` and the navbar shows a red badge.
+- **Part F — Attempts:** cohort comes from the switcher; red device badge when `deviceSwitchCount > 0`; `violationSummary` block in `AttemptDetails` above the log; `DEVICE_SWITCH` label `Opened on another device`.
+- **Part G — Testing:** extend `tools/e2e/api-flow.mjs` with every Alpha rule (section 19.5).
+
+### Maya — student side, students page, question bank page
+
+**New files:** `client/src/pages/instructor/Students/`, `client/src/pages/instructor/QuestionBank/`, `client/src/context/InstructorStudentsContext.tsx`, `client/src/context/QuestionBankContext.tsx`, `client/src/services/students.api.ts`, `client/src/services/bank.api.ts`, `client/src/types/students.types.ts`, `client/src/types/bank.types.ts`. CSS prefixes `students-`, `bank-`.
+
+- **Part A — Student screens:** when the start response has `deviceWarning`, show it in `ViolationWarningDialog` before the questions; update `IntegrityStatus` to show `devices x/2`; if the attempt was terminated by the switch, show the terminated result. My Tests needs no change (the backend filters by cohort).
+- **Part B — Students page** (`/instructor/students`): table (name, email, status, created), search, pagination; add student form; edit; enable / disable; reset password (show the new password once); "Sign out everywhere" with `ConfirmDialog`. Uses the cohort from `CohortContext`.
+- **Part C — Question bank** (`/instructor/bank`): filters (city, cohort, type), search, pagination; read-only test view with correct options and all test cases; buttons **Copy question**, **Copy problem**, **Copy whole test** → choose one of my tests of the same type; show the `409` lock message and the `400` type message.
+
+### Esmaeel — schema, auth, integrity, alerts, results, seed
+
+**New files:** `api/src/common/cohort-access.service.ts`, `api/src/alerts/` (module, controller, service, DTOs), `api/src/auth/session.service.ts`.
+
+- **Part A — Schema (first, Day 1 morning):** everything in 19.2 "Data" in one migration `alpha_cohorts`, including the data move for existing rows. Read the generated SQL. Stubs for every new endpoint (`// STUB`) so Ali and Maya can start.
+- **Part B — Sessions (A-9):** `UserSession` row on every sign-in; JWT payload `+ sid`; `JwtAuthGuard` checks the session is not revoked and the user is active (messages in 19.2); students: revoke older sessions on sign-in; `SessionService.revokeAll(userId, reason)` for Rami's "sign out everywhere".
+- **Part C — Roles and cohort access:** `ADMIN` in `RolesGuard`; `CohortAccessService.assertInstructorCohort(user, cohortId)` and `assertTestAccess / assertAttemptAccess` used by Majed, Rami and you. `ADMIN` always passes.
+- **Part D — Register:** `joinCode` (trimmed, upper-cased) → cohort; messages from 19.2.
+- **Part E — Device rule (A-6):** `DEVICE` group in `IntegrityService` with `DEVICE_SWITCH_ALLOWED`; `issueSessionKey(tx, attemptId, isResume)` records the counted switch and returns `{ sessionKey, deviceWarning, terminated }`; termination in the same transaction, reason from 19.2.
+- **Part F — Alerts (A-7):** `AlertsService.createForViolation(tx, ...)` called for every **counted** violation (DEVICE_SWITCH → `DANGER`, others → `WARNING`) and `ATTEMPT_TERMINATED` (`DANGER`), inside the violation transaction. The four alert endpoints, scoped to the caller's cohorts, paginated `{ data, meta }`.
+- **Part G — Results (A-4, A-8):** attempts list requires `cohortId` and is scoped; rows `+ deviceSwitchCount`; details `+ violationSummary`. Student results unchanged.
+- **Part H — Seed:** 1 admin, 2 cities, 3 cohorts (one archived), 2 instructors (one linked to two cohorts), students in two cohorts. Demo accounts in the README.
+- **Part I — `api.http`:** one request for every new endpoint and every message in 19.2.
+
+### Majed — admin module, cohort tests, question bank
+
+**New files:** `api/src/admin/` (module, controllers, service, DTOs), `api/src/bank/` (module, controller, service, mapper), `api/src/tests/copy.service.ts`.
+
+- **Part A — Admin (A-10):** cities, cohorts, join codes (unique, format in 19.2), archive, instructors (bcrypt, `toSafeUser`), link / unlink. Log create, archive, link.
+- **Part B — New cohort (A-2):** creating a cohort always creates its three tests (orders 1–3, `DRAFT`). With `copyFromCohortId`, the content of each source test is copied with `CopyService` in **one transaction**.
+- **Part C — Tests per cohort:** `GET /instructor/tests?cohortId=`; every existing test, question and problem endpoint checks access with `CohortAccessService`; publish rules unchanged; R-4 per test.
+- **Part D — Copy (A-12):** `CopyService.copyTest / copyQuestion / copyProblem` (options and test cases included, new ids, positions appended at the end); target must be unlocked (`409`) and the same type (`400`); source is never changed; set `sourceTestId`.
+- **Part E — Bank:** list every test of every cohort (archived included) with city, cohort, type, counts; detail with full instructor content; paginated `{ data, meta }`; never reachable by students (`403`).
+
+### Rami — student flow per cohort, device switch, student management
+
+**New files:** `api/src/cohort-students/` (module, controller, service, DTOs).
+
+- **Part A — Student tests per cohort (A-1):** `GET /student/tests` shows only the published tests of the student's cohort; the cohort must be `ACTIVE` (archived → empty list); "previous test" means `order - 1` **in the same cohort**.
+- **Part B — Start / resume (A-6):** use the new `issueSessionKey` result; add `deviceWarning` to the start response; if `terminated`, return the finished attempt. The R-4 lock and the shuffled order are unchanged.
+- **Part C — Student management (A-11):** the five endpoints of 19.2; every action checks `CohortAccessService`; a created student gets the cohort, role `STUDENT`, bcrypt password; email taken → `409` with the register message; reset password and disable also call `SessionService.revokeAll`. Log create, update, disable, reset, sign-out (never the password).
+
+## 19.4 Order of work
+
+```text
+Day 1 morning   Ali: contract (Part A)  +  Esmaeel: schema, migration, stubs (Part A)
+                ↓  (everyone branches from main)
+Day 1 – Day 2   Esmaeel: sessions, roles, cohort access   ← Majed and Rami need CohortAccessService
+                Majed: admin module, tests per cohort, copy, bank
+                Rami: student tests per cohort, student management
+                Ali: auth, admin screens, cohort switcher      Maya: students page, bank page
+                ↓
+Day 2           Esmaeel: device rule + alerts  →  Rami: start/resume uses it  →  Maya: device warning
+                Ali: alerts page + attempts changes
+                ↓
+Day 3           integration on main, api-flow + api.http + full manual test (19.5), README demo accounts
+```
+
+Branch names: `feature/alpha-<short-name>` (for example `feature/alpha-schema`, `feature/alpha-bank-page`).
+
+## 19.5 Alpha Definition of Done
+
+- The `alpha_cohorts` migration runs on the existing database and every old attempt is still there, in `Cohort 8 — Salamiyah`.
+- Admin creates a city, a cohort (copied from another cohort), an instructor, and links them. The new cohort's tests are `DRAFT` and editable.
+- A student signs up with the join code and sees only the tests of their cohort. A wrong or archived code is refused with the exact message.
+- An instructor sees only their cohorts, switches between them, and gets `403` on another cohort's test, attempt, student or alert.
+- An instructor creates, edits, disables, re-enables a student, resets the password and signs them out everywhere.
+- The bank lists the tests of all cohorts; copying a question, a problem and a whole test works; copying into a locked test gives `409`; the source never changes.
+- Signing in as the same student on a second device signs out the first one with the exact message.
+- Resuming a running exam twice gives the two warnings and two `DANGER` alerts; the third resume ends the exam with the saved score and the fixed reason.
+- Every counted violation creates one alert with the right severity; alerts survive after the exam ends and can be marked as read; the navbar badge updates within 15 s.
+- The attempts table shows the red device badge and the details show `violationSummary` for finished attempts.
+- Archiving a cohort hides its tests from its students and keeps every result.
+- `api-flow.mjs` covers every line above and passes; `api.http` covers every new endpoint; the old checks still pass.
+- `API.md`, `PROJECT-STRUCTURE.md`, `README.md` (demo accounts) describe Alpha.
