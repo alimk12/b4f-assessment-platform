@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import Button from '../../../components/common/Button';
 import ErrorMessage from '../../../components/common/ErrorMessage';
 import Loading from '../../../components/common/Loading';
@@ -13,6 +14,12 @@ const VIOLATION_LABEL: Record<string, string> = {
 interface Props { attempt: InstructorAttemptDetail | null; isLoading: boolean; error: string | null; onClose(): void }
 
 export default function AttemptDetails({ attempt, isLoading, error, onClose }: Props) {
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
   return (
     <div className="ui-dialog__backdrop" role="dialog" aria-modal="true" aria-label="Attempt details" onClick={onClose}>
       <div className="ui-dialog attempts-details" onClick={(e) => e.stopPropagation()}>
