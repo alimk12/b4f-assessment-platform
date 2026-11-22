@@ -10,6 +10,8 @@ The backend decides everything important: access, order, timing, scores, Run and
 
 **Every name in this document is fixed.** Need a new shared name or a change? Ask the team lead first.
 
+> **Alpha:** section 17 adds cities, cohorts, the `ADMIN` role, alerts, student management and the question bank (schema, folders, routes, contexts, prefixes, ownership). Where section 17 and an older section disagree, section 17 wins.
+
 ## 2. Root Structure
 
 ```text
@@ -234,6 +236,8 @@ All routes are created in Phase 0 and point to placeholder pages. Only Ali edits
 
 Navbar links: instructor → **Tests**, **Attempts**. Student → **My Tests**, **My Results**. Both → user name and **Sign out**.
 
+**Alpha:** admin routes, Alerts, Students and Question bank, and the new navbar links are in section 17.4.
+
 ### 4.2 State with Context
 
 Server data (with its loading and error state) lives in five contexts:
@@ -248,6 +252,8 @@ client/src/context/
 ```
 
 Each file exports a **Provider** and a **hook**. `App.tsx` wraps the router with all five providers (`AuthProvider` outermost).
+
+**Alpha** adds five contexts (`CohortContext`, `AlertsContext`, `AdminContext`, `InstructorStudentsContext`, `QuestionBankContext`): see section 17.5.
 
 #### The pattern (all contexts use it)
 
@@ -691,6 +697,8 @@ export const ATTEMPT_SESSION_HEADER = 'x-attempt-session';
 
 `schema.prisma` has **one owner: Esmaeel**. It is complete after Phase 0. Need a change? Ask Esmaeel. He changes it in his own branch with a new migration.
 
+**Alpha** changes `Role`, `ViolationType`, `User` and `Test` and adds `City`, `Cohort`, `CohortInstructor`, `UserSession` and `Alert` (migration `alpha_cohorts`): see section 17.2. The schema below is the pre-Alpha version.
+
 ```prisma
 generator client {
   provider = "prisma-client-js"
@@ -1094,6 +1102,8 @@ The backend enforces every rule. The frontend only guides the user.
 | I-6 autosave | `McqService.saveAnswer` | `saveMcqAnswer` on every change |
 | I-7 full screen | — (cannot be enforced by a server) | `FullscreenGate`, `useFullscreen` |
 
+Alpha rules A-1 to A-12: section 17.7.
+
 ## 9. Naming
 
 ### Data
@@ -1170,6 +1180,8 @@ Plain CSS is global, so class names must never clash.
 | Code editor | `code-editor-` | Maya |
 | Countdown | `countdown-` | Maya |
 
+Alpha prefixes (`admin-`, `alerts-`, `cohort-`, `students-`, `bank-`): section 17.8.
+
 ## 12. Ownership
 
 One owner for every file. Edit only your own files.
@@ -1197,6 +1209,8 @@ One owner for every file. Edit only your own files.
 | Esmaeel | `api/package.json` |
 
 Need a change in someone else's file? Ask the owner. Do not edit it.
+
+Alpha files and the one exception inside `pages/instructor/`: section 17.9.
 
 ## 13. Loading and Errors
 
@@ -1306,3 +1320,366 @@ useExamGuard({ isActive, onViolation: reportViolation });
 - A browser can be told to leave full screen at any time (Esc), and a student can turn off JavaScript or use a second device. The browser checks **deter**; they cannot **prevent**.
 - That is why the decisions are on the server, and why the strong protections are server-side: server time, one attempt, shuffled order, one active session, and no correct answers or hidden tests in any response.
 - Every violation is logged with its time, so the instructor can review a case instead of trusting an automatic decision alone.
+
+---
+
+## 17. Alpha — Cities, Cohorts, Instructors (instructor approval required)
+
+Alpha turns the platform into a multi-cohort platform (one cohort per city and intake). The rules and the API are in `API.md`, section 20. The tasks and the order of work are in `TASKS.md`, section 19. This section fixes the **structure**: schema, folders, routes, contexts, CSS prefixes and ownership. Where this section and an older section of this file disagree, this section wins.
+
+### 17.1 New and changed folders
+
+**Backend (`api/src/`)**
+
+```text
+api/src/
+├── admin/                          owner: Majed      (ADMIN: cities, cohorts, join codes, instructors, links)
+│   ├── admin.module.ts
+│   ├── cities.controller.ts         cohorts.controller.ts         instructors.controller.ts
+│   ├── admin.service.ts
+│   ├── join-code.util.ts
+│   └── dto/
+├── bank/                           owner: Majed      (read-only bank of every cohort's tests)
+│   ├── bank.module.ts   bank.controller.ts   bank.service.ts
+│   ├── mappers/bank-test.mapper.ts
+│   └── dto/bank-query.dto.ts
+├── tests/
+│   ├── copy.service.ts             owner: Majed      (copyTest / copyQuestion / copyProblem, also used by admin)
+│   └── copy.controller.ts          owner: Majed      (the three copy endpoints)
+├── cohort-students/                owner: Rami       (instructor manages students)
+│   ├── cohort-students.module.ts   cohort-students.controller.ts   cohort-students.service.ts
+│   └── dto/
+├── alerts/                         owner: Esmaeel
+│   ├── alerts.module.ts   alerts.controller.ts   alerts.service.ts
+│   ├── alert-messages.ts
+│   └── dto/alerts-query.dto.ts
+├── auth/
+│   └── session.service.ts          owner: Esmaeel    (UserSession: create, touch, revoke, revokeAll)
+└── common/
+    ├── cohort-access.service.ts    owner: Esmaeel    (global, used by every instructor module)
+    └── dto/pagination-query.dto.ts owner: Esmaeel    (page, limit → { data, meta })
+```
+
+**Frontend (`client/src/`)**
+
+```text
+client/src/
+├── context/
+│   ├── CohortContext.tsx              owner: Ali     (instructor's cohorts + selected cohort)
+│   ├── AlertsContext.tsx              owner: Ali     (unread count polling, alert list)
+│   ├── AdminContext.tsx               owner: Ali     (cities, cohorts, instructors for the admin screens)
+│   ├── InstructorStudentsContext.tsx  owner: Maya
+│   └── QuestionBankContext.tsx        owner: Maya
+├── services/
+│   ├── admin.api.ts   alerts.api.ts   owner: Ali
+│   └── students.api.ts   bank.api.ts  owner: Maya
+├── types/
+│   ├── admin.types.ts   alert.types.ts   cohort.types.ts   owner: Ali
+│   └── students.types.ts   bank.types.ts                 owner: Maya
+└── pages/
+    ├── admin/                         owner: Ali
+    │   ├── Cities/   (CitiesPage)
+    │   ├── Cohorts/  (CohortsPage, CohortForm)
+    │   └── Instructors/ (InstructorsPage, InstructorForm)
+    └── instructor/
+        ├── Alerts/        (AlertsPage, AlertRow)                       owner: Ali
+        ├── Students/      (StudentsPage, StudentForm, ResetPasswordDialog) owner: Maya
+        └── QuestionBank/  (QuestionBankPage, BankTestView, CopyDialog)  owner: Maya
+```
+
+`components/layout/Navbar.tsx` (Ali) gets the cohort select and the alerts badge.
+
+### 17.2 Prisma schema changes (Esmaeel, migration `alpha_cohorts`)
+
+```prisma
+enum Role {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+}
+
+enum CohortStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ViolationType {
+  FULLSCREEN_EXIT
+  TAB_HIDDEN
+  COPY
+  CUT
+  PASTE_EXTERNAL
+  DROP_EXTERNAL
+  NEW_SESSION      // old rows only
+  DEVICE_SWITCH    // sent by the server only
+}
+
+enum AlertSeverity {
+  DANGER
+  WARNING
+}
+
+enum AlertType {
+  DEVICE_SWITCH
+  FULLSCREEN_EXIT
+  TAB_HIDDEN
+  COPY
+  CUT
+  PASTE_EXTERNAL
+  DROP_EXTERNAL
+  ATTEMPT_TERMINATED
+}
+
+model City {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  cohorts   Cohort[]
+
+  @@map("cities")
+}
+
+model Cohort {
+  id          Int                @id @default(autoincrement())
+  name        String
+  cityId      Int                @map("city_id")
+  joinCode    String             @unique @map("join_code")
+  status      CohortStatus       @default(ACTIVE)
+  createdAt   DateTime           @default(now()) @map("created_at")
+  archivedAt  DateTime?          @map("archived_at")
+  city        City               @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  students    User[]
+  tests       Test[]
+  instructors CohortInstructor[]
+  alerts      Alert[]
+
+  @@unique([cityId, name])
+  @@map("cohorts")
+}
+
+model CohortInstructor {
+  cohortId  Int      @map("cohort_id")
+  userId    Int      @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  cohort    Cohort   @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([cohortId, userId])
+  @@map("cohort_instructors")
+}
+
+model UserSession {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastSeenAt   DateTime  @default(now()) @map("last_seen_at")
+  revokedAt    DateTime? @map("revoked_at")
+  revokeReason String?   @map("revoke_reason")   // "OTHER_DEVICE" | "INSTRUCTOR" | "PASSWORD_RESET" | "DISABLED" | "LOGOUT"
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@map("user_sessions")
+}
+
+model Alert {
+  id        Int           @id @default(autoincrement())
+  cohortId  Int           @map("cohort_id")
+  attemptId Int           @map("attempt_id")
+  studentId Int           @map("student_id")
+  type      AlertType
+  severity  AlertSeverity
+  message   String
+  createdAt DateTime      @default(now()) @map("created_at")
+  readAt    DateTime?     @map("read_at")
+  readById  Int?          @map("read_by_id")
+  cohort    Cohort        @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  attempt   Attempt       @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  student   User          @relation("AlertStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  readBy    User?         @relation("AlertReader", fields: [readById], references: [id], onDelete: SetNull)
+
+  @@index([cohortId, readAt])
+  @@index([cohortId, createdAt])
+  @@map("alerts")
+}
+
+// Changes to existing models
+model User {
+  // ...existing fields...
+  cohortId          Int?               @map("cohort_id")        // students only
+  isActive          Boolean            @default(true) @map("is_active")
+  cohort            Cohort?            @relation(fields: [cohortId], references: [id], onDelete: Restrict)
+  instructorCohorts CohortInstructor[]
+  sessions          UserSession[]
+  alertsAbout       Alert[]            @relation("AlertStudent")
+  alertsRead        Alert[]            @relation("AlertReader")
+}
+
+model Test {
+  // ...existing fields, but `order` is no longer @unique...
+  cohortId     Int    @map("cohort_id")
+  sourceTestId Int?   @map("source_test_id")   // information only, no relation
+  cohort       Cohort @relation(fields: [cohortId], references: [id], onDelete: Restrict)
+
+  @@unique([cohortId, order])
+}
+
+model Attempt {
+  // ...existing fields...
+  alerts Alert[]
+}
+```
+
+**Data move inside the migration** (existing databases keep everything):
+
+1. Insert the city `Salamiyah` and the cohort `Cohort 8` (`ACTIVE`, a generated join code).
+2. Set `cohort_id` of every test and every `STUDENT` to that cohort; link every `INSTRUCTOR` to it in `cohort_instructors`.
+3. Only then make `tests.cohort_id` `NOT NULL`, drop the old unique index on `tests.order`, and add `(cohort_id, order)`.
+
+Write the migration with `npx prisma migrate dev --create-only --name alpha_cohorts`, add the data SQL by hand between the generated steps, and read the whole file before committing. Test it on a **copy** of a database that already has attempts.
+
+### 17.3 Seed (Esmaeel, with Majed's content)
+
+| Account | Email | Password | Notes |
+| --- | --- | --- | --- |
+| Admin | `admin@b4f.local` | `Admin123` | — |
+| Instructor | `instructor@b4f.local` | `Instructor123` | Cohort 8 — Salamiyah and Cohort 9 — Salamiyah |
+| Instructor | `rana@b4f.local` | `Instructor123` | Cohort 3 — Homs |
+| Student | `lina@b4f.local`, `omar@b4f.local` | `Student123` | Cohort 9 — Salamiyah |
+| Student | `sami@b4f.local` | `Student123` | Cohort 3 — Homs |
+
+Cohorts: `Cohort 8 — Salamiyah` (`ARCHIVED`), `Cohort 9 — Salamiyah` (`ACTIVE`, its tests as in 7.3), `Cohort 3 — Homs` (`ACTIVE`, tests copied from Cohort 9, all `DRAFT`). Fixed join codes for local development only: `SALAM9XX`, `HOMS3XXX`. The seed stays safe to run twice (upsert by email, by city name, by `(cityId, name)`, and by `(cohortId, order)`).
+
+### 17.4 Routes (changes 4.1)
+
+| Route | Page | Role | Owner |
+| --- | --- | --- | --- |
+| `/` | redirect: admin → `/admin/cohorts`, instructor → `/instructor/tests`, student → `/student/tests` | any | Ali |
+| `/admin/cities` | `CitiesPage` | ADMIN | Ali |
+| `/admin/cohorts` | `CohortsPage` | ADMIN | Ali |
+| `/admin/instructors` | `InstructorsPage` | ADMIN | Ali |
+| `/instructor/alerts` | `AlertsPage` | INSTRUCTOR, ADMIN | Ali |
+| `/instructor/students` | `StudentsPage` | INSTRUCTOR, ADMIN | Maya |
+| `/instructor/bank` | `QuestionBankPage` | INSTRUCTOR, ADMIN | Maya |
+
+`RequireRole` accepts a list of roles. Every `/instructor/*` page uses the cohort selected in `CohortContext`.
+
+Navbar: admin → **Cohorts**, **Cities**, **Instructors**. Instructor → cohort select, **Tests**, **Attempts**, **Students**, **Alerts** (red badge with the unread count, `!` when `dangerCount > 0`), **Question bank**. Student → unchanged.
+
+### 17.5 Context shapes (adds to 4.2)
+
+The pattern and the rules of 4.2 stay. `App.tsx` adds `CohortProvider` and `AlertsProvider` inside `AuthProvider`, and `AdminProvider`, `InstructorStudentsProvider`, `QuestionBankProvider` next to the other providers.
+
+**`CohortContext`** (Ali)
+
+```ts
+cohorts: InstructorCohort[];
+selectedCohortId: number | null;      // saved in localStorage under "b4f.cohortId"
+isCohortsLoading: boolean;
+cohortsError: string | null;
+loadCohorts(): Promise<void>;
+selectCohort(cohortId: number): void;
+```
+
+**`AlertsContext`** (Ali)
+
+```ts
+unreadCount: number;
+dangerCount: number;                  // polled every ALERTS_POLL_SECONDS (15) while an instructor is signed in
+alerts: Alert[];
+alertsMeta: PageMeta | null;
+isAlertsLoading: boolean;
+alertsError: string | null;
+loadAlerts(query: AlertsQuery): Promise<void>;
+markRead(alertId: number): Promise<void>;
+markAllRead(): Promise<void>;
+```
+
+**`InstructorStudentsContext`** (Maya)
+
+```ts
+students: StudentAccount[];
+studentsMeta: PageMeta | null;
+isStudentsLoading: boolean;
+studentsError: string | null;
+actionError: string | null;
+loadStudents(query: StudentsQuery): Promise<void>;
+createStudent(input: CreateStudentInput): Promise<boolean>;
+updateStudent(userId: number, input: UpdateStudentInput): Promise<boolean>;
+resetPassword(userId: number, newPassword: string): Promise<boolean>;
+signOutStudent(userId: number): Promise<boolean>;
+```
+
+**`QuestionBankContext`** (Maya)
+
+```ts
+tests: BankTestSummary[];
+testsMeta: PageMeta | null;
+selectedTest: BankTestDetail | null;
+isBankLoading: boolean;
+bankError: string | null;
+copyError: string | null;
+loadTests(query: BankQuery): Promise<void>;
+loadTest(testId: number): Promise<void>;
+copyTest(targetTestId: number, sourceTestId: number): Promise<boolean>;
+copyQuestion(targetTestId: number, sourceQuestionId: number): Promise<boolean>;
+copyProblem(targetTestId: number, sourceProblemId: number): Promise<boolean>;
+```
+
+**`AdminContext`** (Ali): `cities`, `cohorts`, `instructors` with their loading / error state, and `createCity`, `createCohort`, `archiveCohort`, `newJoinCode`, `createInstructor`, `updateInstructor`, `linkInstructor`, `unlinkInstructor`.
+
+`AuthContext` (Ali) gets `signedOutReason: string | null` (the `401` message, shown on `/sign-in`) and `signOut()` calls `POST /auth/logout` before clearing the token. `AttemptContext` (Maya) gets `deviceWarning: string | null` from the start response.
+
+### 17.6 Fixed backend names (adds to 7.4)
+
+| Class | Methods |
+| --- | --- |
+| `SessionService` (Esmaeel) | `create(tx, userId, role)`, `assertActive(sid, userId)`, `revokeAll(userId, reason, exceptSid?)`, `revoke(sid, reason)` |
+| `CohortAccessService` (Esmaeel) | `listCohortIds(user)`, `assertCohort(user, cohortId)`, `assertTest(user, testId)`, `assertQuestion(user, questionId)`, `assertProblem(user, problemId)`, `assertAttempt(user, attemptId)`, `assertStudent(user, studentId)` |
+| `AlertsService` (Esmaeel) | `createForViolation(tx, attempt, type, counts)`, `createForTermination(tx, attempt, reason)`, `list(user, query)`, `unreadCount(user, cohortId?)`, `markRead(user, alertId)`, `markAllRead(user, cohortId)` |
+| `IntegrityService` (Esmaeel) | `issueSessionKey(tx, attemptId, isResume)` now returns `{ sessionKey, deviceWarning, terminated }` |
+| `AdminService` (Majed) | `listCities`, `createCity`, `listCohorts`, `createCohort`, `archiveCohort`, `regenerateJoinCode`, `listInstructors`, `createInstructor`, `updateInstructor`, `linkInstructor`, `unlinkInstructor` |
+| `CopyService` (Majed) | `copyTestContent(tx, sourceTestId, targetTestId)`, `copyQuestion(tx, sourceQuestionId, targetTestId)`, `copyProblem(tx, sourceProblemId, targetTestId)` |
+| `BankService` (Majed) | `list(query)`, `getDetail(testId, user)` |
+| `CohortStudentsService` (Rami) | `list(user, cohortId, query)`, `create(user, cohortId, dto)`, `update(user, userId, dto)`, `resetPassword(user, userId, dto)`, `signOut(user, userId)` |
+
+Who calls whom (adds to 7.5): Majed's, Rami's and Esmaeel's instructor services call `CohortAccessService` first. Rami's `AttemptsService.start` calls `IntegrityService.issueSessionKey`. `IntegrityService` calls `AlertsService` and `ScoringService` inside the same transaction. `CohortStudentsService` and `AdminService` call `SessionService.revokeAll` when they disable an account or reset a password.
+
+### 17.7 Where each Alpha rule is enforced (adds to 8)
+
+| Rule | Backend (decides) | Frontend (guides) |
+| --- | --- | --- |
+| A-1 one cohort per student and test | `cohortId` on `User` and `Test`; `StudentTestsService` filters by cohort | My Tests shows what it gets |
+| A-2 new cohort from another | `AdminService.createCohort` + `CopyService` (one transaction) | "Copy tests from" select |
+| A-3 archive | `AdminService.archiveCohort`; register and student tests check `status` | Archive with confirm; status badge |
+| A-4 cohort scope | `CohortAccessService` in every instructor service (403) | Cohort select in the navbar |
+| A-6 device switch | `IntegrityService.issueSessionKey` + `ScoringService` (one transaction) | Warning dialog from `deviceWarning` |
+| A-7 alerts | `AlertsService` inside the violation / termination transaction | Alerts page, badge polling |
+| A-8 summary | `ResultsService` adds `violationSummary`, `deviceSwitchCount` | Summary block, red device badge |
+| A-9 one student sign-in | `SessionService` in login; `JwtAuthGuard` checks `sid` | Signed-out message on `/sign-in` |
+| A-10 admin only | `RolesGuard` + `@Roles('ADMIN')` | Admin routes and navbar |
+| A-11 student accounts | `AuthService.register` (join code), `CohortStudentsService` | Join code field, Students page |
+| A-12 bank | `BankService` (read-only), `CopyService` (R-4 and type checks) | Bank page, copy dialog |
+
+### 17.8 CSS prefixes (adds to 11)
+
+| Area | Prefix | Owner |
+| --- | --- | --- |
+| Admin screens | `admin-` | Ali |
+| Alerts page and badge | `alerts-` | Ali |
+| Cohort select | `cohort-` | Ali |
+| Students page | `students-` | Maya |
+| Question bank | `bank-` | Maya |
+
+Colors stay in `theme.css`: `DANGER` uses `--color-error`, `WARNING` uses `--color-warning`, `ARCHIVED` uses `--color-text-muted`. Every severity also shows its text label.
+
+### 17.9 Ownership (adds to 12)
+
+| Owner | New files |
+| --- | --- |
+| Ali | `pages/admin/`, `pages/instructor/Alerts/`, `context/CohortContext.tsx`, `context/AlertsContext.tsx`, `context/AdminContext.tsx`, `services/admin.api.ts`, `services/alerts.api.ts`, `types/admin.types.ts`, `types/alert.types.ts`, `types/cohort.types.ts` |
+| Maya | `pages/instructor/Students/`, `pages/instructor/QuestionBank/`, `context/InstructorStudentsContext.tsx`, `context/QuestionBankContext.tsx`, `services/students.api.ts`, `services/bank.api.ts`, `types/students.types.ts`, `types/bank.types.ts` |
+| Esmaeel | `alerts/`, `auth/session.service.ts`, `common/cohort-access.service.ts`, `common/dto/pagination-query.dto.ts`, migration `alpha_cohorts` |
+| Majed | `admin/`, `bank/`, `tests/copy.service.ts`, `tests/copy.controller.ts` |
+| Rami | `cohort-students/` |
+
+**Exception to 12:** `pages/instructor/` belongs to Ali **except** `pages/instructor/Students/` and `pages/instructor/QuestionBank/`, which belong to Maya. `CODEOWNERS` is updated in the same PR as this section.

@@ -1,5 +1,7 @@
 # Bytes for Futures Assessment Platform — API
 
+> **Alpha:** section 20 adds cities, cohorts, an `ADMIN` role, one sign-in per student, the device-switch rule, instructor alerts, student management and a shared question bank. Where section 20 and an older section disagree, section 20 wins.
+
 ## 1. Overview
 
 The API is the **source of truth** for the whole application. The frontend only shows what the API returns.
@@ -45,6 +47,7 @@ Authorization: Bearer <accessToken>
 - The token payload is `{ sub: userId, email, role }`.
 - Two roles: `INSTRUCTOR` and `STUDENT`. Instructor accounts are seeded. Students sign up.
 - `/instructor/*` routes need `INSTRUCTOR`. `/student/*` routes need `STUDENT`.
+- **Alpha** adds `ADMIN`, the session id `sid` in the token, and new `401` / `403` messages: see section 20.2.
 
 | Situation | Status | Message |
 | --- | --- | --- |
@@ -82,6 +85,8 @@ Authorization: Bearer <accessToken>
 | POST | `/student/attempts/:attemptId/violations` | Report an exam-rule violation | STUDENT | Esmaeel |
 | GET | `/student/results` | The student's own results | STUDENT | Esmaeel |
 
+**Alpha** adds the `/admin/*`, cohort, student-management, bank and alert endpoints, and changes register, login, `/instructor/tests`, `/instructor/attempts` and start: see sections 20.5–20.8.
+
 ## 5. Data Shapes
 
 All JSON fields use `camelCase`. All times are ISO 8601 strings in UTC, for example `2026-11-03T10:00:00.000Z`.
@@ -101,6 +106,8 @@ ViolationGroup      FOCUS | CLIPBOARD | SESSION
 ```
 
 "Finished" in this document always means `SUBMITTED`, `EXPIRED` or `TERMINATED`.
+
+**Alpha** adds `ADMIN` to `Role`, `DEVICE_SWITCH` to `ViolationType`, `DEVICE` to `ViolationGroup`, and the new enums in section 20.4.
 
 ### 5.2 User and AuthResponse
 
@@ -1221,3 +1228,410 @@ Start sends `acceptedRules: true`. Without it the backend answers `400` (section
 - Questions, options and the code editor are visible **only** in full screen. Otherwise a gate shows `Return to full screen to continue.` with a button. The countdown keeps running behind it.
 - After a warning, a dialog shows the backend `warning` and a **Return to full screen** button.
 - After termination or finishing, the page leaves full screen and shows the result.
+
+---
+
+## 20. Alpha — Cities, Cohorts, Instructors (instructor approval required)
+
+> Alpha turns the platform from one group of students into many cohorts in many cities. The plan, the owners and the order of work are in `TASKS.md`, section 19. **Where this section and an older section disagree, this section wins.** Nothing in Alpha is merged before the instructor approves it in writing.
+
+### 20.1 Rules
+
+| # | Rule |
+| --- | --- |
+| A-1 | Every student belongs to exactly one cohort. Every test belongs to exactly one cohort. A cohort belongs to one city and always has three tests (orders 1–3). |
+| A-2 | A new cohort can copy the content of its three tests from any cohort. The copies start as `DRAFT` and are editable. |
+| A-3 | An `ARCHIVED` cohort is hidden from its students (empty test list), refuses new sign-ups, and keeps every attempt and alert. |
+| A-4 | An instructor sees only the cohorts they are linked to. `ADMIN` sees every cohort. |
+| A-6 | Opening an `IN_PROGRESS` attempt again (a resume) is a device switch. 2 are allowed with a warning; the 3rd terminates the attempt. |
+| A-7 | Every **counted** violation and every termination creates one permanent alert for the cohort. |
+| A-9 | A student has one active sign-in. A new sign-in ends the others. Admins and instructors may have many. |
+| A-10 | Only `ADMIN` creates cities, cohorts and instructor accounts and links instructors to cohorts. |
+| A-11 | Students sign up with a join code, or an instructor of their cohort creates them. |
+| A-12 | Every instructor can read every test of every cohort (the bank) and copy content into their own unlocked tests. The source never changes. |
+
+Unchanged: one attempt per student per test (`@@unique([userId, testId])`), the server clock and grace, `EXPIRED` is `null`, R-4 (now per cohort test), shuffled order, the FOCUS and CLIPBOARD rules, Run / Submit limits, execution.
+
+### 20.2 Roles and authentication (changes section 3)
+
+```text
+Role   ADMIN | INSTRUCTOR | STUDENT
+```
+
+- `/admin/*` needs `ADMIN`. `/instructor/*` needs `INSTRUCTOR` **or** `ADMIN`. `/student/*` needs `STUDENT`.
+- The token payload becomes `{ sub: userId, email, role, sid }`. `sid` is the id of a `UserSession` row.
+- On every request `JwtAuthGuard` checks: the token is valid, the session exists and is not revoked, the user is active.
+
+| Situation | Status | Message |
+| --- | --- | --- |
+| No token, bad token, expired token | 401 | `Please sign in to continue.` |
+| Session ended because the student signed in on another device | 401 | `You were signed out because your account was used on another device.` |
+| Session ended by an instructor, a password reset, or the account was disabled | 401 | `You were signed out. Please sign in again.` |
+| Instructor uses a cohort, test, question, problem, attempt, student or alert outside their cohorts | 403 | `You do not have access to this cohort.` |
+
+The frontend shows the two "signed out" messages on `/sign-in` after it clears the token.
+
+### 20.3 Pagination
+
+Every **new** list endpoint takes `?page=&limit=` (`page` ≥ 1, default 1; `limit` 1–100, default 20) and returns:
+
+```json
+{ "data": [], "meta": { "page": 1, "limit": 20, "total": 57, "totalPages": 3 } }
+```
+
+| Problem | Status | Message |
+| --- | --- | --- |
+| Bad `page` | 400 | `page must be a positive whole number.` |
+| Bad `limit` | 400 | `limit must be a whole number from 1 to 100.` |
+
+The old list endpoints (`/instructor/tests`, `/instructor/attempts`, `/student/tests`, `/student/results`) keep returning plain arrays.
+
+### 20.4 New enums and data shapes
+
+```text
+CohortStatus    ACTIVE | ARCHIVED
+ViolationType   + DEVICE_SWITCH          (sent by the server only; NEW_SESSION stays for old rows)
+ViolationGroup  + DEVICE
+AlertSeverity   DANGER | WARNING
+AlertType       DEVICE_SWITCH | FULLSCREEN_EXIT | TAB_HIDDEN | COPY | CUT | PASTE_EXTERNAL | DROP_EXTERNAL | ATTEMPT_TERMINATED
+```
+
+**City**
+
+```json
+{ "id": 1, "name": "Salamiyah", "cohortCount": 2 }
+```
+
+**Cohort**
+
+```json
+{
+  "id": 4,
+  "name": "Cohort 9",
+  "city": { "id": 1, "name": "Salamiyah" },
+  "joinCode": "K7QM4XRT",
+  "status": "ACTIVE",
+  "studentCount": 23,
+  "instructors": [{ "id": 2, "fullName": "Instructor Demo" }],
+  "createdAt": "2026-11-17T09:00:00.000Z",
+  "archivedAt": null
+}
+```
+
+`joinCode` is returned to `ADMIN` and to the cohort's own instructors only. Format: 8 characters from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` (no `0`, `O`, `1`, `I`).
+
+**User** (changes 5.2)
+
+```json
+{ "id": 3, "fullName": "Lina Saleh", "email": "lina@example.com", "role": "STUDENT", "isActive": true,
+  "cohort": { "id": 4, "name": "Cohort 9", "city": "Salamiyah" } }
+```
+
+`cohort` is set for students and `null` for admins and instructors. `GET /auth/me` also returns `cohorts` (array of `{ id, name, city, status }`) for an instructor and `null` for others.
+
+**InstructorAccount** (admin screens)
+
+```json
+{ "id": 2, "fullName": "Instructor Demo", "email": "instructor@b4f.local", "isActive": true,
+  "cohorts": [{ "id": 4, "name": "Cohort 9", "city": "Salamiyah" }], "createdAt": "2026-11-17T09:00:00.000Z" }
+```
+
+**StudentAccount** (students page)
+
+```json
+{ "id": 3, "fullName": "Lina Saleh", "email": "lina@example.com", "isActive": true,
+  "cohortId": 4, "attemptCount": 2, "lastSignInAt": "2026-11-17T10:12:00.000Z", "createdAt": "2026-11-10T08:00:00.000Z" }
+```
+
+**BankTestSummary**
+
+```json
+{
+  "id": 11, "title": "IQ Test", "type": "MCQ", "order": 1, "status": "PUBLISHED",
+  "cohort": { "id": 2, "name": "Cohort 8", "status": "ARCHIVED" },
+  "city": { "id": 3, "name": "Homs" },
+  "questionCount": 12, "problemCount": 0, "isMine": false
+}
+```
+
+`isMine` is `true` when the test belongs to one of the caller's cohorts. The bank **detail** has the same shape as `InstructorTestDetail` (5.6), correct options and hidden cases included, plus `cohort` and `city`.
+
+**Alert**
+
+```json
+{
+  "id": 91,
+  "type": "DEVICE_SWITCH",
+  "severity": "DANGER",
+  "message": "Lina Saleh opened IQ Test on another device (1 of 2).",
+  "student": { "id": 3, "fullName": "Lina Saleh", "email": "lina@example.com" },
+  "test": { "id": 11, "title": "IQ Test" },
+  "attemptId": 15,
+  "cohortId": 4,
+  "createdAt": "2026-11-17T10:14:02.000Z",
+  "readAt": null,
+  "readBy": null
+}
+```
+
+Fixed alert messages (`<student>` = full name, `<test>` = test title):
+
+| Type | Severity | `message` |
+| --- | --- | --- |
+| `DEVICE_SWITCH` | DANGER | `<student> opened <test> on another device (<n> of 2).` (`<n>` is 3 → `(3 of 2, exam ended)`) |
+| `FULLSCREEN_EXIT` | WARNING | `<student> left full screen in <test> (<n> of 2).` |
+| `TAB_HIDDEN` | WARNING | `<student> switched away from <test> (<n> of 2).` |
+| `COPY` / `CUT` | WARNING | `<student> tried to copy in <test> (<n> of 3).` |
+| `PASTE_EXTERNAL` / `DROP_EXTERNAL` | WARNING | `<student> tried to paste from outside in <test> (<n> of 3).` |
+| `ATTEMPT_TERMINATED` | DANGER | `<student>'s <test> was ended: <terminationReason>` |
+
+Only **counted** violations create alerts (the 2-second duplicates do not). A termination creates two alerts: the violation that caused it and `ATTEMPT_TERMINATED`. Alerts are shared by the cohort: marking one as read marks it for every instructor of that cohort, and `readBy` (`{ id, fullName }`) shows who.
+
+**ViolationSummary** (added to the attempt detail)
+
+```json
+{
+  "device":    { "count": 2, "allowed": 2 },
+  "focus":     { "count": 1, "limit": 2 },
+  "clipboard": { "count": 0, "limit": 3 }
+}
+```
+
+### 20.5 Changes to existing endpoints
+
+**POST /auth/register** (section 6)
+
+```json
+{ "fullName": "Lina Saleh", "email": "lina@example.com", "password": "secret123", "joinCode": "k7qm4xrt" }
+```
+
+`joinCode` is required, trimmed and upper-cased. The student is created in that cohort and gets a session (A-9).
+
+| Problem | Status | Message |
+| --- | --- | --- |
+| `joinCode` missing | 400 | `Cohort code is required.` |
+| Code does not exist | 400 | `This cohort code is not valid.` |
+| Cohort is `ARCHIVED` | 400 | `This cohort is closed for new sign-ups.` |
+
+**POST /auth/login** (section 6)
+
+- Wrong email or wrong password → the same `401 Invalid email or password.` as before.
+- Correct password but `isActive` is `false` → `403 This account is disabled. Please contact your instructor.`
+- A student whose cohort is archived can still sign in (to see results).
+- For a `STUDENT`, every older session is revoked with the reason "another device" in the same transaction that creates the new session.
+
+**POST /auth/logout** (new, any role) → `204`. Revokes the caller's current session.
+
+**GET /instructor/tests** (section 7) now needs `?cohortId=` and returns the three tests of that cohort.
+
+| Problem | Status | Message |
+| --- | --- | --- |
+| `cohortId` missing or not a positive whole number | 400 | `cohortId must be a positive whole number.` |
+| Not one of the caller's cohorts | 403 | `You do not have access to this cohort.` |
+
+Every other endpoint of sections 7 and 8 that takes a `testId`, `questionId`, `problemId` or `attemptId` checks that it belongs to one of the caller's cohorts (`403`, same message).
+
+**GET /instructor/attempts** (section 8) now needs `?cohortId=` (same `400` / `403` as above). `testId` must belong to that cohort. Every row gets `"deviceSwitchCount": 2`.
+
+**GET /instructor/attempts/:attemptId** (section 8) gets `"violationSummary"` (20.4). `DEVICE_SWITCH` rows appear in `violations` with `"group": "DEVICE"`.
+
+**GET /student/tests** (section 9) returns only the published tests of the student's cohort, and an empty list when the cohort is `ARCHIVED`. "Previous test" means `order - 1` **in the same cohort**. A test of another cohort is `404 Test not found.`
+
+**POST /student/tests/:testId/attempts** (section 9), row 3 (resume) now also:
+
+1. records a counted `DEVICE_SWITCH` violation and a `DANGER` alert,
+2. returns the attempt with a new `sessionKey` and `"deviceWarning"` (the warning below, or `null` for a new attempt),
+3. on the 3rd switch terminates the attempt (section 19.3 scoring, `terminationReason: "Opened the exam on another device 3 times."`) and returns `200` with the finished attempt (`status: "TERMINATED"`, `result` filled, no `sessionKey`).
+
+| Switch | `deviceWarning` |
+| --- | --- |
+| 1st | `This exam was opened on another device. Device change 1 of 2. A third change ends your exam.` |
+| 2nd | `This exam was opened on another device. Device change 2 of 2. The next change ends your exam.` |
+
+A refresh in the same tab keeps `sessionStorage` and does not call start, so it is **not** a switch. Closing the tab and opening the exam again from My Tests **is** a switch (the server cannot tell devices apart). The pledge screen says so.
+
+**StudentAttempt.integrity** (5.8) gets `"deviceSwitches": 1, "deviceAllowed": 2`.
+
+**POST /student/attempts/:attemptId/violations** (19.2): `DEVICE_SWITCH` sent by the client → `400 Unknown violation type.` The response gets `deviceSwitches` and `deviceAllowed`. Each counted violation also creates its alert in the same transaction.
+
+### 20.6 Admin endpoints (Majed, role `ADMIN`)
+
+#### GET /admin/cities · POST /admin/cities
+
+```json
+{ "name": "Homs" }
+```
+
+`201 → City`. Name trimmed, 2–60 characters (`400 City name must be 2 to 60 characters.`). Name taken (not case-sensitive) → `409 A city with this name already exists.`
+
+#### GET /admin/cohorts?cityId=&status=&page=&limit=
+
+`200 → { data: Cohort[], meta }`, newest first.
+
+#### POST /admin/cohorts
+
+```json
+{ "name": "Cohort 9", "cityId": 1, "copyFromCohortId": 2 }
+```
+
+`201 → Cohort`. In **one transaction**: the cohort, a unique join code, and its three tests (`IQ Test` MCQ 20 min, `HTML & CSS Test` MCQ 20 min, `JavaScript Problem Solving` CODING 45 min, orders 1–3, `DRAFT`). With `copyFromCohortId`, each new test also gets a copy of the content (and the title and duration) of the source test with the same order, and `sourceTestId` is set.
+
+| Problem | Status | Message |
+| --- | --- | --- |
+| Name not 2–60 characters | 400 | `Cohort name must be 2 to 60 characters.` |
+| City does not exist | 404 | `City not found.` |
+| Source cohort does not exist | 404 | `Cohort not found.` |
+| Same name in the same city | 409 | `This city already has a cohort with this name.` |
+
+#### PATCH /admin/cohorts/:cohortId/archive
+
+`200 → Cohort` (`status: ARCHIVED`, `archivedAt` set). Already archived → `409 This cohort is already archived.` An attempt that is `IN_PROGRESS` → `409 This cohort cannot be archived while a student is taking a test.` (overdue attempts are expired first).
+
+#### POST /admin/cohorts/:cohortId/join-code
+
+`200 → Cohort` with a new code. The old code stops working at once.
+
+#### GET /admin/instructors?search=&page=&limit= · POST /admin/instructors
+
+```json
+{ "fullName": "Rana Haddad", "email": "rana@b4f.local", "password": "secret123", "cohortIds": [4] }
+```
+
+`201 → InstructorAccount`. Same name / email / password rules and messages as register. Email taken → `409 An account with this email already exists.`
+
+#### PATCH /admin/instructors/:userId
+
+```json
+{ "fullName": "Rana Haddad", "isActive": false }
+```
+
+Every field is optional. Disabling revokes every session of that instructor. `404 Instructor not found.` An admin cannot disable their own account → `400 You cannot disable your own account.`
+
+#### POST /admin/cohorts/:cohortId/instructors/:userId · DELETE (same path)
+
+Link → `201 → Cohort`; already linked → `409 This instructor is already linked to this cohort.` Unlink → `200 → Cohort`; not linked → `404 This instructor is not linked to this cohort.`
+
+### 20.7 Instructor cohort, student and bank endpoints
+
+#### GET /instructor/cohorts (Majed)
+
+`200 → Cohort[]` — the caller's cohorts (active first, then archived), with join codes. For `ADMIN`: every cohort.
+
+#### GET /instructor/cohorts/:cohortId/students?search=&status=&page=&limit= (Rami)
+
+`status` is `ACTIVE` or `DISABLED`. `search` matches name or email, not case-sensitive. `200 → { data: StudentAccount[], meta }`, by name.
+
+#### POST /instructor/cohorts/:cohortId/students (Rami)
+
+```json
+{ "fullName": "Omar Khaled", "email": "omar@example.com", "password": "secret123" }
+```
+
+`201 → StudentAccount`. Same rules and messages as register (without `joinCode`). Archived cohort → `409 This cohort is archived.`
+
+#### PATCH /instructor/students/:userId (Rami)
+
+```json
+{ "fullName": "Omar Khaled", "email": "omar.k@example.com", "isActive": false }
+```
+
+Every field optional. Disabling revokes every session. Email taken → `409`. Not a student of the caller's cohorts → `404 Student not found.` (never reveals other cohorts).
+
+#### POST /instructor/students/:userId/reset-password (Rami)
+
+```json
+{ "newPassword": "newsecret123" }
+```
+
+`204`. Min 8 characters. Revokes every session of the student.
+
+#### POST /instructor/students/:userId/sign-out (Rami)
+
+`204`. Revokes every session of the student. If the student is in an exam, the timer keeps running; opening it again is a device switch.
+
+#### GET /instructor/bank/tests?cityId=&cohortId=&type=&search=&page=&limit= (Majed)
+
+`200 → { data: BankTestSummary[], meta }`. Every test of every cohort, archived included. `search` matches the test title or any question text / problem title.
+
+#### GET /instructor/bank/tests/:testId (Majed)
+
+`200 → bank detail` (20.4). `404 Test not found.`
+
+#### POST /instructor/tests/:testId/copy-from (Majed)
+
+```json
+{ "sourceTestId": 11 }
+```
+
+Appends **all** questions (with options) or problems (with test cases) of the source to the target, in one transaction. `200 → InstructorTestDetail` of the target.
+
+#### POST /instructor/tests/:testId/questions/copy · POST /instructor/tests/:testId/problems/copy (Majed)
+
+```json
+{ "sourceQuestionId": 70 }
+```
+
+```json
+{ "sourceProblemId": 9 }
+```
+
+`201 → InstructorQuestion` / `InstructorProblem` (new ids, appended at the end).
+
+Errors for the three copy endpoints:
+
+| Problem | Status | Message |
+| --- | --- | --- |
+| Target test not in the caller's cohorts | 403 | `You do not have access to this cohort.` |
+| Source does not exist | 404 | `Test not found.` / `Question not found.` / `Problem not found.` |
+| Source and target types differ, or a problem into an MCQ test | 400 | `You can only copy into a test of the same type.` |
+| Target has an attempt (R-4) | 409 | (the existing content-lock message) |
+| Source is the target | 400 | `A test cannot be copied into itself.` |
+
+The source is never changed. Copied content follows the normal content rules (2–6 options, sample and hidden cases); content that breaks them is copied as it is and checked again at publish time.
+
+### 20.8 Alert endpoints (Esmaeel)
+
+#### GET /instructor/alerts?cohortId=&severity=&unread=&page=&limit=
+
+`cohortId` required. `severity` is `DANGER` or `WARNING`. `unread=true` returns only unread alerts. `200 → { data: Alert[], meta }`, newest first.
+
+#### GET /instructor/alerts/unread-count?cohortId=
+
+`200 → { "count": 7, "dangerCount": 2 }`. Without `cohortId`: the total over every cohort of the caller (the navbar badge). The frontend polls it every 15 seconds while an instructor is signed in.
+
+#### PATCH /instructor/alerts/:alertId/read
+
+`200 → Alert`. Already read → `200` with the same alert (no change). `404 Alert not found.`
+
+#### PATCH /instructor/alerts/read-all?cohortId=
+
+`200 → { "updated": 7 }`.
+
+Alerts are never deleted, not even when a cohort is archived.
+
+### 20.9 Logger (adds to section 16)
+
+| Event | Owner |
+| --- | --- |
+| city / cohort created, cohort archived, join code changed, instructor created / disabled / linked / unlinked | Majed |
+| content copied from the bank (source id → target id) | Majed |
+| student created / updated / disabled / password reset / signed out by an instructor | Rami |
+| session created, sessions revoked (reason), device switch recorded, alert created | Esmaeel |
+
+Never log passwords, tokens, session ids, session keys or join codes.
+
+### 20.10 Testing checklist (adds to section 17)
+
+- [ ] Admin creates a city, a cohort copied from another cohort, an instructor, and links them; the new tests are `DRAFT` and editable.
+- [ ] Register with a valid code, a wrong code, and an archived cohort's code.
+- [ ] Second student sign-in → the first token gets `401` with the "another device" message.
+- [ ] Disabled account → `403` on login; disabling a signed-in student → `401` on the next request.
+- [ ] Instructor A gets `403` on a test, attempt, student and alert of a cohort that is not theirs.
+- [ ] Students list, create, edit, disable, enable, reset password, sign out everywhere.
+- [ ] Bank list and detail; copy a question, a problem and a whole test; copy into a locked test → `409`; wrong type → `400`; the source is unchanged.
+- [ ] Resume an exam twice → two warnings and two `DANGER` alerts; the 3rd resume → `TERMINATED` with the fixed reason and the saved score.
+- [ ] Every counted violation → one alert with the right severity; duplicates → none; termination → two alerts.
+- [ ] Alerts: filter, mark one, mark all, unread count; still there after the attempt is finished.
+- [ ] Attempts list needs `cohortId`, rows have `deviceSwitchCount`, details have `violationSummary`.
+- [ ] Archiving a cohort empties its students' test list and keeps every result.
+- [ ] All older checks of section 17 still pass.
