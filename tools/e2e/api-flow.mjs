@@ -1,4 +1,6 @@
-const B = 'http://localhost:3000/api';
+const B = process.env.API_URL ?? 'http://localhost:3000/api';
+// Needs a fresh seed: students join Cohort 9 - Salamiyah with its fixed local code.
+const JOIN = 'SALAM9XX';
 let pass = 0, fail = 0;
 const ok = (c, m, extra) => { if (c) { pass++; } else { fail++; console.log('FAIL:', m, extra !== undefined ? JSON.stringify(extra).slice(0, 300) : ''); } };
 async function call(method, path, { token, body, session } = {}) {
@@ -13,25 +15,27 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const email = `stu${Date.now()}@test.local`;
 
 // Auth
-let r = await call('POST', '/auth/register', { body: { fullName: '  Test Student ', email, password: 'secret123' } });
+let r = await call('POST', '/auth/register', { body: { fullName: '  Test Student ', email, password: 'secret123', joinCode: JOIN.toLowerCase() } });
 ok(r.s === 201 && r.d.user.role === 'STUDENT' && r.d.accessToken, 'register', r);
 const stu = r.d.accessToken;
-r = await call('POST', '/auth/register', { body: { fullName: 'X', email, password: 'secret123' } });
+r = await call('POST', '/auth/register', { body: { fullName: 'X', email, password: 'secret123', joinCode: JOIN } });
 ok(r.s === 409 && r.d.message === 'An account with this email already exists.', 'dup email', r);
-r = await call('POST', '/auth/register', { body: { fullName: 'X', email: 'a@b.co', password: 'short' } });
+r = await call('POST', '/auth/register', { body: { fullName: 'X', email: 'a@b.co', password: 'short', joinCode: JOIN } });
 ok(r.s === 400 && r.d.message === 'Password must be at least 8 characters.', 'short pw', r);
-r = await call('POST', '/auth/register', { body: { fullName: 'X', email: 'a@b.co', password: 'secret123', role: 'INSTRUCTOR' } });
+r = await call('POST', '/auth/register', { body: { fullName: 'X', email: 'a@b.co', password: 'secret123', joinCode: JOIN, role: 'INSTRUCTOR' } });
 ok(r.s === 400, 'unknown field rejected', r);
 r = await call('POST', '/auth/login', { body: { email: 'instructor@b4f.local', password: 'wrong' } });
 ok(r.s === 401 && r.d.message === 'Invalid email or password.', 'bad login', r);
 r = await call('POST', '/auth/login', { body: { email: 'instructor@b4f.local', password: 'Instructor123' } });
 const ins = r.d.accessToken; ok(r.s === 200 && r.d.user.role === 'INSTRUCTOR', 'instructor login', r);
 r = await call('GET', '/auth/me'); ok(r.s === 401 && r.d.message === 'Please sign in to continue.', 'no token 401', r);
-r = await call('GET', '/instructor/tests', { token: stu }); ok(r.s === 403, 'student on instructor route', r);
+r = await call('GET', '/instructor/tests?cohortId=1', { token: stu }); ok(r.s === 403, 'student on instructor route', r);
 r = await call('GET', '/nope', { token: stu }); ok(r.s === 404 && r.d.message === 'Endpoint not found.', 'unknown route', r);
 
-// Instructor view
-r = await call('GET', '/instructor/tests', { token: ins });
+// Instructor view (Alpha: inside one cohort)
+const c9 = (await call('GET', '/instructor/cohorts', { token: ins })).d.find((c) => c.joinCode === JOIN);
+ok(!!c9, 'instructor cohort 9');
+r = await call('GET', `/instructor/tests?cohortId=${c9.id}`, { token: ins });
 ok(r.s === 200 && r.d.length === 3 && r.d[0].questionCount >= 10, 'instructor tests', r);
 const [iq, html, js] = r.d;
 r = await call('GET', `/instructor/tests/${iq.id}`, { token: ins });
@@ -54,6 +58,7 @@ ok(!JSON.stringify(att1).includes('isCorrect'), 'no isCorrect in student view');
 const orderSame = JSON.stringify(att1.questions.map((q) => q.id));
 r = await call('POST', `/student/tests/${iq.id}/attempts`, { token: stu, body: { acceptedRules: true } });
 ok(r.s === 200 && r.d.id === att1.id && r.d.deadline === att1.deadline && r.d.sessionKey !== key, 'resume same attempt new key', r);
+ok(r.d.deviceWarning?.includes('Device change 1 of 2') && r.d.integrity.deviceSwitches === 1, 'resume counts as device change (A-6)', r.d);
 ok(JSON.stringify(r.d.questions.map((q) => q.id)) === orderSame, 'order kept on resume');
 const oldKey = key; key = r.d.sessionKey;
 r = await call('GET', `/student/attempts/${att1.id}`, { token: stu, session: oldKey });
@@ -169,11 +174,11 @@ ok(r.s === 409 && r.d.message === 'This test has already been submitted.', 'run 
 // Results
 r = await call('GET', '/student/results', { token: stu });
 ok(r.d.length === 3 && r.d[1].status === 'TERMINATED' && r.d[2].label === '50%', 'student results', r);
-r = await call('GET', `/instructor/attempts?status=TERMINATED&search=test stud`, { token: ins });
+r = await call('GET', `/instructor/attempts?cohortId=${c9.id}&status=TERMINATED&search=test stud`, { token: ins });
 ok(r.s === 200 && r.d.length >= 1 && r.d[0].violationCount === 3 && r.d[0].terminationReason, 'instructor filter', r);
 r = await call('GET', `/instructor/attempts/${att2.id}`, { token: ins });
 ok(r.d.violations.length >= 4 && r.d.violations.some((v) => v.type === 'TAB_HIDDEN' && !v.counted) && r.d.mcq.correctCount === 3, 'instructor detail', r);
-r = await call('GET', `/instructor/attempts?status=BAD`, { token: ins });
+r = await call('GET', `/instructor/attempts?cohortId=${c9.id}&status=BAD`, { token: ins });
 ok(r.s === 400 && r.d.message === 'status must be IN_PROGRESS, SUBMITTED, EXPIRED or TERMINATED.', 'bad status filter', r);
 
 console.log(JSON.stringify({ email, iq: iq.id, html: html.id, js: js.id }));
