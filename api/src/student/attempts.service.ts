@@ -23,7 +23,8 @@ export class AttemptsService {
   ) {}
 
   async start(userId: number, testId: number): Promise<{ created: boolean; view: unknown }> {
-    const test = await this.prisma.test.findUnique({ where: { id: testId } });
+    // A-1: a test of another cohort (or of an archived cohort) does not exist for this student.
+    const test = (await this.studentTests.cohortTests(userId)).find((t) => t.id === testId);
     if (!test) throw new NotFoundException('Test not found.');
     if (test.status !== 'PUBLISHED') {
       this.logger.warn(`Forbidden start of unpublished test ${testId} by user ${userId}`);
@@ -63,13 +64,18 @@ export class AttemptsService {
     }
   }
 
+  /**
+   * Re-opening an IN_PROGRESS attempt is a device switch (A-6): the new key comes with a warning,
+   * and the 3rd switch ends the attempt (then the finished attempt is returned, without a key).
+   */
   private async resume(attemptId: number, status: string) {
     if (status !== 'IN_PROGRESS') throw new ConflictException('You have already finished this test.');
     const issued = await this.prisma.$transaction((tx) => this.integrity.issueSessionKey(tx, attemptId, true));
-    return { created: false, view: await this.view(attemptId, issued.sessionKey) };
+    const view = await this.view(attemptId, issued.sessionKey);
+    return { created: false, view: { ...view, deviceWarning: issued.deviceWarning } };
   }
 
-  async getForStudent(userId: number, attemptId: number) {
+  async getForStudent(userId: number, attemptId: number): Promise<unknown> {
     await this.attemptState.expireOverdue();
     const attempt = await this.prisma.attempt.findFirst({ where: { id: attemptId, userId }, select: { id: true } });
     if (!attempt) throw new NotFoundException('Attempt not found.');
@@ -91,6 +97,7 @@ export class AttemptsService {
       submittedAt: a.submittedAt,
       terminatedAt: a.terminatedAt,
       sessionKey,
+      deviceWarning: null as string | null,
       questions: null as unknown,
       problems: null as unknown,
       executionMode: a.test.type === 'CODING' ? this.execution.getMode() : null,
