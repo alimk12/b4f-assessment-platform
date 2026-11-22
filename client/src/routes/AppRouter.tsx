@@ -9,6 +9,8 @@ import SignInPage from '../pages/Auth/SignInPage';
 import SignUpPage from '../pages/Auth/SignUpPage';
 import AlertsPage from '../pages/instructor/Alerts/AlertsPage';
 import AttemptsPage from '../pages/instructor/Attempts/AttemptsPage';
+import QuestionBankPage from '../pages/instructor/QuestionBank/QuestionBankPage';
+import StudentsPage from '../pages/instructor/Students/StudentsPage';
 import TestEditorPage from '../pages/instructor/TestEditor/TestEditorPage';
 import TestManagementPage from '../pages/instructor/TestManagement/TestManagementPage';
 import NotFoundPage from '../pages/NotFound/NotFoundPage';
@@ -47,6 +49,8 @@ export default function AppRouter() {
         <Route path="/instructor/tests/:testId" element={instructor(<TestEditorPage />)} />
         <Route path="/instructor/attempts" element={instructor(<AttemptsPage />)} />
         <Route path="/instructor/alerts" element={instructor(<AlertsPage />)} />
+        <Route path="/instructor/students" element={instructor(<StudentsPage />)} />
+        <Route path="/instructor/bank" element={instructor(<QuestionBankPage />)} />
         <Route path="/student/tests" element={student(<MyTestsPage />)} />
         <Route path="/student/tests/:testId" element={student(<TestIntroPage />)} />
         <Route path="/student/attempts/:attemptId" element={student(<AttemptPage />)} />

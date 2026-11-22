@@ -10,7 +10,9 @@ interface NavItem { to: string; label: string; badge?: boolean }
 const INSTRUCTOR_LINKS: NavItem[] = [
   { to: '/instructor/tests', label: 'Tests' },
   { to: '/instructor/attempts', label: 'Attempts' },
+  { to: '/instructor/students', label: 'Students' },
   { to: '/instructor/alerts', label: 'Alerts', badge: true },
+  { to: '/instructor/bank', label: 'Question bank' },
 ];
 
 const LINKS: Record<Role, NavItem[]> = {
