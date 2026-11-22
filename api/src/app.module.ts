@@ -1,7 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AdminModule } from './admin/admin.module';
+import { AlertsModule } from './alerts/alerts.module';
 import { AttemptStateModule } from './attempt-state/attempt-state.module';
 import { AuthModule } from './auth/auth.module';
+import { BankModule } from './bank/bank.module';
+import { CohortStudentsModule } from './cohort-students/cohort-students.module';
 import { CommonModule } from './common/common.module';
 import { ExecutionModule } from './execution/execution.module';
 import { IntegrityModule } from './integrity/integrity.module';
@@ -22,6 +26,10 @@ import { TestsModule } from './tests/tests.module';
     TestsModule,
     StudentModule,
     ResultsModule,
+    AdminModule,
+    BankModule,
+    AlertsModule,
+    CohortStudentsModule,
   ],
 })
 export class AppModule {}

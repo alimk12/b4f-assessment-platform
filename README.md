@@ -43,15 +43,28 @@ To start over with a clean database: `npx prisma migrate reset --force` (drops e
 
 ### Demo accounts (from the seed)
 
-| Role | Email | Password |
-| --- | --- | --- |
-| Instructor | `instructor@b4f.local` | `Instructor123` |
-| Student | `lina@b4f.local` | `Student123` |
-| Student | `omar@b4f.local` | `Student123` |
+| Role | Email | Password | Cohorts |
+| --- | --- | --- | --- |
+| Admin | `admin@b4f.local` | `Admin123` | every cohort |
+| Instructor | `instructor@b4f.local` | `Instructor123` | Cohort 8 — Salamiyah (archived), Cohort 9 — Salamiyah |
+| Instructor | `rana@b4f.local` | `Instructor123` | Cohort 3 — Homs |
+| Student | `lina@b4f.local`, `omar@b4f.local` | `Student123` | Cohort 9 — Salamiyah |
+| Student | `sami@b4f.local` | `Student123` | Cohort 3 — Homs |
 
-New students can also sign up from the **Sign up** page. Instructor accounts come only from the seed.
+New students sign up from the **Sign up** page with their cohort's code (local seed codes: `SALAM9XX` for Cohort 9 — Salamiyah, `HMS3XXXX` for Cohort 3 — Homs), or an instructor creates them from **Students**. Instructor accounts are created by the admin.
 
-The seed publishes the IQ and HTML & CSS tests. The coding test starts as **Draft** — publish it from **Tests** as the instructor.
+In Cohort 9 the seed publishes the IQ and HTML & CSS tests; the coding test starts as **Draft** — publish it from **Tests** as the instructor. Cohort 3 — Homs starts with all three tests as drafts copied from Cohort 9.
+
+### Alpha (cohorts, admin, alerts, question bank)
+
+The platform serves many cohorts in many cities (`docs/API.md` §20, `docs/PROJECT-STRUCTURE.md` §17, `docs/TASKS.md` §19):
+an admin creates cities, cohorts and instructor accounts; each instructor works inside their own cohorts (select in the navbar);
+students see only their cohort's tests; a student has one active sign-in; re-opening a running exam is a device change (2 allowed,
+the 3rd ends the exam); every counted violation becomes a permanent alert for the cohort's instructors; all instructors share a
+read-only question bank they can copy from.
+
+The `alpha_cohorts` migration keeps an existing database: every existing test, student and attempt is moved into `Cohort 8 — Salamiyah`
+and every existing instructor is linked to it (`npx prisma migrate deploy`). Old sign-in tokens stop working; everyone signs in again.
 
 ## 3. Environment variables (`api/.env`)
 
@@ -97,8 +110,12 @@ With the API running (and the database freshly seeded):
 ```bash
 node tools/e2e/api-flow.mjs          # full API flow: auth, roles, MCQ, integrity, coding, results
 node tools/e2e/expiry.mjs            # server timer, grace period, EXPIRED state (needs psql)
-node tools/e2e/ui-walkthrough.cjs ./shots   # browser walkthrough with Playwright (client on :5173)
+node tools/e2e/alpha-flow.mjs        # Alpha: admin, cohorts, join codes, sessions, device rule, alerts, students, bank
+node tools/e2e/ui-walkthrough.cjs ./shots   # browser walkthrough with Playwright (client on :5173) — not updated for Alpha yet
 ```
+
+Run them in this order on a fresh seed: `alpha-flow.mjs` changes Cohort 9's join code at the end. `API_URL` and `DATABASE_URL`
+(for `expiry.mjs`) can point the scripts at another server or database.
 
 ## 7. Repository rules
 

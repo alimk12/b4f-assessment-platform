@@ -22,9 +22,9 @@ export class InstructorTestsService {
     return { test: t, view: toInstructorTestSummary(t, { questionCount, problemCount, attemptCount, inProgressCount }) };
   }
 
-  async findAll() {
+  async findAll(cohortId: number) {
     await this.attemptState.expireOverdue();
-    const tests = await this.prisma.test.findMany({ orderBy: { order: 'asc' } });
+    const tests = await this.prisma.test.findMany({ where: { cohortId }, orderBy: { order: 'asc' } });
     return Promise.all(tests.map(async (t) => (await this.summary(t.id)).view));
   }
 

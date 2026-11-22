@@ -23,7 +23,7 @@ export class ResultsService {
     return null;
   }
 
-  private toRow(a: Row) {
+  private toRow(a: Row, deviceSwitchCount: number) {
     return {
       id: a.id,
       student: { id: a.user.id, fullName: a.user.fullName, email: a.user.email },
@@ -36,16 +36,19 @@ export class ResultsService {
       timeUsedSeconds: this.timeUsedSeconds(a),
       score: a.status === 'EXPIRED' ? null : a.score,
       violationCount: a._count.violations,
+      deviceSwitchCount,
       terminationReason: a.terminationReason,
     };
   }
 
   private include = { user: true, test: true, _count: { select: { violations: { where: { counted: true } } } } } as const;
 
+  /** The caller's access to q.cohortId is checked by the controller (A-4). */
   async listAttempts(q: AttemptsQueryDto) {
     await this.attemptState.expireOverdue();
     const rows = await this.prisma.attempt.findMany({
       where: {
+        test: { cohortId: q.cohortId },
         ...(q.testId ? { testId: q.testId } : {}),
         ...(q.status ? { status: q.status } : {}),
         ...(q.search ? { user: { fullName: { contains: q.search, mode: 'insensitive' as const } } } : {}),
@@ -53,19 +56,21 @@ export class ResultsService {
       include: this.include,
       orderBy: { startedAt: 'desc' },
     });
-    return rows.map((r) => this.toRow(r as Row));
+    const devices = await this.integrity.deviceSwitchCounts(rows.map((r) => r.id));
+    return rows.map((r) => this.toRow(r as Row, devices.get(r.id) ?? 0));
   }
 
   async getAttemptDetail(attemptId: number) {
     await this.attemptState.expireOverdue();
     const a = await this.prisma.attempt.findUnique({ where: { id: attemptId }, include: this.include });
     if (!a) throw new NotFoundException('Attempt not found.');
-    const row = this.toRow(a as Row);
+    const violationSummary = await this.integrity.getViolationSummary(attemptId);
+    const row = this.toRow(a as Row, violationSummary.device.count);
     const violations = await this.integrity.listViolations(attemptId);
     if (a.test.type === 'MCQ') {
       const totalCount = await this.prisma.question.count({ where: { testId: a.testId } });
       const correctCount = await this.prisma.mcqAnswer.count({ where: { attemptId, isCorrect: true } });
-      return { ...row, mcq: { correctCount, totalCount }, violations };
+      return { ...row, mcq: { correctCount, totalCount }, violationSummary, violations };
     }
     const results = await this.prisma.problemResult.findMany({
       where: { attemptId },
@@ -83,6 +88,7 @@ export class ResultsService {
         totalCount: r.totalCount,
         points: r.points,
       })),
+      violationSummary,
       violations,
     };
   }

@@ -1547,7 +1547,7 @@ Write the migration with `npx prisma migrate dev --create-only --name alpha_coho
 | Student | `lina@b4f.local`, `omar@b4f.local` | `Student123` | Cohort 9 — Salamiyah |
 | Student | `sami@b4f.local` | `Student123` | Cohort 3 — Homs |
 
-Cohorts: `Cohort 8 — Salamiyah` (`ARCHIVED`), `Cohort 9 — Salamiyah` (`ACTIVE`, its tests as in 7.3), `Cohort 3 — Homs` (`ACTIVE`, tests copied from Cohort 9, all `DRAFT`). Fixed join codes for local development only: `SALAM9XX`, `HOMS3XXX`. The seed stays safe to run twice (upsert by email, by city name, by `(cityId, name)`, and by `(cohortId, order)`).
+Cohorts: `Cohort 8 — Salamiyah` (`ARCHIVED`), `Cohort 9 — Salamiyah` (`ACTIVE`, its tests as in 7.3), `Cohort 3 — Homs` (`ACTIVE`, tests copied from Cohort 9, all `DRAFT`). Fixed join codes for local development only: `SALAM9XX`, `HMS3XXXX`. The seed stays safe to run twice (upsert by email, by city name, by `(cityId, name)`, and by `(cohortId, order)`).
 
 ### 17.4 Routes (changes 4.1)
 
