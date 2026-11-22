@@ -73,15 +73,15 @@ Authorization: Bearer <accessToken>
 | DELETE | `/instructor/problems/:problemId` | Delete a coding problem | INSTRUCTOR | Majed |
 | GET | `/instructor/attempts?testId=&status=&search=` | All attempts, filtered | INSTRUCTOR | Esmaeel |
 | GET | `/instructor/attempts/:attemptId` | One attempt in detail | INSTRUCTOR | Esmaeel |
-| GET | `/student/tests` | Published tests with their state | STUDENT | Rami |
-| GET | `/student/tests/:testId` | One published test with its state | STUDENT | Rami |
-| POST | `/student/tests/:testId/attempts` | Start (or resume) an attempt | STUDENT | Rami |
-| GET | `/student/attempts/:attemptId` | The attempt screen data | STUDENT | Rami |
-| POST | `/student/attempts/:attemptId/mcq-submit` | Submit MCQ answers | STUDENT | Rami |
-| POST | `/student/attempts/:attemptId/problems/:problemId/run` | Run code on the sample case | STUDENT | Rami (+ Majed's execution service) |
-| POST | `/student/attempts/:attemptId/problems/:problemId/submit` | Submit code for hidden tests | STUDENT | Rami (+ Majed's execution service) |
-| POST | `/student/attempts/:attemptId/finish` | Finish the coding test | STUDENT | Rami |
-| PUT | `/student/attempts/:attemptId/mcq-answers/:questionId` | Autosave one MCQ answer | STUDENT | Rami |
+| GET | `/student/tests` | Published tests with their state | STUDENT | Yazan |
+| GET | `/student/tests/:testId` | One published test with its state | STUDENT | Yazan |
+| POST | `/student/tests/:testId/attempts` | Start (or resume) an attempt | STUDENT | Yazan |
+| GET | `/student/attempts/:attemptId` | The attempt screen data | STUDENT | Yazan |
+| POST | `/student/attempts/:attemptId/mcq-submit` | Submit MCQ answers | STUDENT | Yazan |
+| POST | `/student/attempts/:attemptId/problems/:problemId/run` | Run code on the sample case | STUDENT | Yazan (+ Majed's execution service) |
+| POST | `/student/attempts/:attemptId/problems/:problemId/submit` | Submit code for hidden tests | STUDENT | Yazan (+ Majed's execution service) |
+| POST | `/student/attempts/:attemptId/finish` | Finish the coding test | STUDENT | Yazan |
+| PUT | `/student/attempts/:attemptId/mcq-answers/:questionId` | Autosave one MCQ answer | STUDENT | Yazan |
 | POST | `/student/attempts/:attemptId/violations` | Report an exam-rule violation | STUDENT | Esmaeel |
 | GET | `/student/results` | The student's own results | STUDENT | Esmaeel |
 
@@ -586,7 +586,7 @@ Coding details (results kept even for EXPIRED and TERMINATED attempts, R-13):
 
 `404` → `Attempt not found.`
 
-## 9. Student Test Endpoints (Rami)
+## 9. Student Test Endpoints (Yazan)
 
 ### GET /student/tests
 
@@ -659,7 +659,7 @@ On success: `startedAt = ClockService.now()`, `deadline = startedAt + durationMi
 
 An overdue attempt is marked `EXPIRED` before it is returned (R-9).
 
-## 10. MCQ Autosave and Submit (Rami)
+## 10. MCQ Autosave and Submit (Yazan)
 
 ### PUT /student/attempts/:attemptId/mcq-answers/:questionId
 
@@ -740,7 +740,7 @@ After row 2, the attempt session is checked (section 19.4). A `TERMINATED` attem
 
 Score: `round1(correctCount / totalCount × 100)` (R-12). Answers, score, status and `submittedAt` are saved in **one transaction**. The status change uses `updateMany({ where: { id, status: 'IN_PROGRESS' } })` and checks that one row changed, so two parallel submits never both succeed.
 
-## 11. Coding Endpoints (Rami, using Majed's `CodeExecutionService`)
+## 11. Coding Endpoints (Yazan, using Majed's `CodeExecutionService`)
 
 Common checks for Run, Submit and Finish, in order:
 
@@ -1023,9 +1023,9 @@ Each service logs its own events with Nest `Logger`:
 | user registered, login failed | Esmaeel |
 | test published / unpublished, content change rejected (R-4) | Majed |
 | execution provider error, execution timeout | Majed |
-| attempt started, MCQ submitted, problem submitted, coding finished | Rami |
-| attempt expired, late request rejected | Rami |
-| forbidden access to an unpublished or locked test | Rami |
+| attempt started, MCQ submitted, problem submitted, coding finished | Yazan |
+| attempt expired, late request rejected | Yazan |
+| forbidden access to an unpublished or locked test | Yazan |
 | violation recorded (type, counted, counts), attempt terminated (reason), session replaced | Esmaeel |
 
 Never log passwords, tokens, correct options, hidden test cases, or student code.
@@ -1517,11 +1517,11 @@ Link → `201 → Cohort`; already linked → `409 This instructor is already li
 
 `200 → Cohort[]` — the caller's cohorts (active first, then archived), with join codes. For `ADMIN`: every cohort.
 
-#### GET /instructor/cohorts/:cohortId/students?search=&status=&page=&limit= (Rami)
+#### GET /instructor/cohorts/:cohortId/students?search=&status=&page=&limit= (Yazan)
 
 `status` is `ACTIVE` or `DISABLED`. `search` matches name or email, not case-sensitive. `200 → { data: StudentAccount[], meta }`, by name.
 
-#### POST /instructor/cohorts/:cohortId/students (Rami)
+#### POST /instructor/cohorts/:cohortId/students (Yazan)
 
 ```json
 { "fullName": "Omar Khaled", "email": "omar@example.com", "password": "secret123" }
@@ -1529,7 +1529,7 @@ Link → `201 → Cohort`; already linked → `409 This instructor is already li
 
 `201 → StudentAccount`. Same rules and messages as register (without `joinCode`). Archived cohort → `409 This cohort is archived.`
 
-#### PATCH /instructor/students/:userId (Rami)
+#### PATCH /instructor/students/:userId (Yazan)
 
 ```json
 { "fullName": "Omar Khaled", "email": "omar.k@example.com", "isActive": false }
@@ -1537,7 +1537,7 @@ Link → `201 → Cohort`; already linked → `409 This instructor is already li
 
 Every field optional. Disabling revokes every session. Email taken → `409`. Not a student of the caller's cohorts → `404 Student not found.` (never reveals other cohorts).
 
-#### POST /instructor/students/:userId/reset-password (Rami)
+#### POST /instructor/students/:userId/reset-password (Yazan)
 
 ```json
 { "newPassword": "newsecret123" }
@@ -1545,7 +1545,7 @@ Every field optional. Disabling revokes every session. Email taken → `409`. No
 
 `204`. Min 8 characters. Revokes every session of the student.
 
-#### POST /instructor/students/:userId/sign-out (Rami)
+#### POST /instructor/students/:userId/sign-out (Yazan)
 
 `204`. Revokes every session of the student. If the student is in an exam, the timer keeps running; opening it again is a device switch.
 
@@ -1615,7 +1615,7 @@ Alerts are never deleted, not even when a cohort is archived.
 | --- | --- |
 | city / cohort created, cohort archived, join code changed, instructor created / disabled / linked / unlinked | Majed |
 | content copied from the bank (source id → target id) | Majed |
-| student created / updated / disabled / password reset / signed out by an instructor | Rami |
+| student created / updated / disabled / password reset / signed out by an instructor | Yazan |
 | session created, sessions revoked (reason), device switch recorded, alert created | Esmaeel |
 
 Never log passwords, tokens, session ids, session keys or join codes.

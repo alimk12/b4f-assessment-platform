@@ -8,7 +8,7 @@
 | Maya Al Hamwi | Student screens: My Tests, Test Intro, MCQ test (with autosave), Coding test (editor, Run, Submit), My Results + exam-guard wiring | Frontend |
 | Esmaeel Mahfoud | Backend foundation + Prisma schema + Seed + Auth & Roles + Exam integrity (violations, termination, session lock) + Attempts list & Results + Endpoint testing | Backend |
 | Majed Hmoud | Test content (publish, questions, problems, MCQ seed, shuffled order) + Code Execution Service (mock + Judge0, harness, readable errors) | Backend |
-| Rami Al Shaar | Attempt state & timing + Scoring + Student tests + Start (pledge, order, session) + MCQ autosave & submit + Coding Run / Submit / Finish | Backend |
+| Yazan Shartooh | Attempt state & timing + Scoring + Student tests + Start (pledge, order, session) + MCQ autosave & submit + Coding Run / Submit / Finish | Backend |
 
 Nawar Hasan is not part of this split.
 
@@ -21,11 +21,11 @@ Each frontend member works with the backend members of their screens. The endpoi
 | Sign in / Sign up | Esmaeel | Ali |
 | Test management + editor | Majed | Ali |
 | Instructor attempts | Esmaeel | Ali |
-| My Tests + Test Intro + start | Rami | Maya |
-| MCQ test | Rami | Maya |
-| Coding test (Run, Submit, Finish) | Rami + Majed (execution) | Maya |
+| My Tests + Test Intro + start | Yazan | Maya |
+| MCQ test | Yazan | Maya |
+| Coding test (Run, Submit, Finish) | Yazan + Majed (execution) | Maya |
 | My Results | Esmaeel | Maya |
-| Exam integrity (full screen, tab switch, copy/paste, termination, session) | Esmaeel (+ Rami's scoring) | Ali (toolkit) + Maya (wiring) |
+| Exam integrity (full screen, tab switch, copy/paste, termination, session) | Esmaeel (+ Yazan's scoring) | Ali (toolkit) + Maya (wiring) |
 
 ### Reviews
 
@@ -41,7 +41,7 @@ Each frontend member works with the backend members of their screens. The endpoi
 | Maya | 1 h (wireframes) | 15.5 h (my tests 1.5, intro + pledge + full screen 1.5, MCQ + autosave 3.5, coding 5.5, results 1, countdown 1, guard wiring + warnings 1.5) | 1 h | ~17.5 h |
 | Esmaeel | 4.5 h (api skeleton, full schema, migration, stubs) | 10 h (auth 2.5, users seed 1, integrity module 3.5, attempts list + results 2, Swagger 1) | 3 h (`api.http` testing) | ~17.5 h |
 | Majed | 2 h (execution spike) | 14.5 h (content 5, MCQ seed 1.5, shuffled order 1, execution 7) | 1 h | ~17.5 h |
-| Rami | 1 h (state design) | 16 h (attempt state 3, scoring service 1, student tests + start with pledge/order/session 3.5, MCQ autosave + submit 3.5, coding 5) | 1 h | ~18 h |
+| Yazan | 1 h (state design) | 16 h (attempt state 3, scoring service 1, student tests + start with pledge/order/session 3.5, MCQ autosave + submit 3.5, coding 5) | 1 h | ~18 h |
 
 The hours are targets, not promises. If one member finishes early, they help **by testing and reviewing**, not by editing someone else's files.
 
@@ -174,7 +174,7 @@ api/
     └── execution/
 ```
 
-### Rami
+### Yazan
 
 ```text
 api/src/
@@ -248,10 +248,10 @@ Goal: know **which execution host works from Syria without a VPN**, before anyon
 3. Write the results in `api/src/execution/SPIKE.md` (Majed's folder) and post the chosen `JUDGE0_URL`, auth header and language id in the team chat (**not** the key).
 4. If nothing works without a VPN: we stay in mock mode, and Ali tells the instructor.
 
-## 5.4 Maya and Rami (~1 h)
+## 5.4 Maya and Yazan (~1 h)
 
 - **Maya:** read the specification and docs. Sketch the five student screens (paper is fine), especially the coding screen layout. Share the sketch with Ali.
-- **Rami:** read the specification and docs. Write the attempt state table (every state, every request, every result) as a comment at the top of `attempt-state.service.ts` in his first PR.
+- **Yazan:** read the specification and docs. Write the attempt state table (every state, every request, every result) as a comment at the top of `attempt-state.service.ts` in his first PR.
 
 ## 5.5 Hand-off
 
@@ -708,10 +708,10 @@ Prisma errors: `P2002` (unique) that reaches the filter → `409` with `This rec
 Everything in `API.md`, section 19, and `PROJECT-STRUCTURE.md`, section 16.1.
 
 1. `ViolationDto`: `type` must be one of the six client types (`NEW_SESSION` is rejected) → `400 Unknown violation type.`
-2. `IntegrityService.recordViolation`: own attempt (`404`), `assertAcceptingRequests` (Rami), group, 2-second dedupe, and in **one transaction**: the violation row, and when the limit is reached the termination with the score from `ScoringService` (Rami). Use a conditional `updateMany` on `IN_PROGRESS`, so a parallel Finish or Submit and a termination never both win.
+2. `IntegrityService.recordViolation`: own attempt (`404`), `assertAcceptingRequests` (Yazan), group, 2-second dedupe, and in **one transaction**: the violation row, and when the limit is reached the termination with the score from `ScoringService` (Yazan). Use a conditional `updateMany` on `IN_PROGRESS`, so a parallel Finish or Submit and a termination never both win.
 3. Fixed warnings and termination reasons exactly as in `API.md` 19.2.
-4. `issueSessionKey(tx, attemptId, isResume)`: `crypto.randomBytes(32).toString('hex')`, stored on the attempt; on resume also a `NEW_SESSION` row (`counted: false`). Rami calls it inside his start transaction.
-5. `AttemptSessionGuard`: only for an `IN_PROGRESS` attempt of this user; compares the `X-Attempt-Session` header with `attempt.sessionKey` → `409` message from `API.md` 19.4. Rami adds it to `StudentAttemptsController`; you add it to `IntegrityController`.
+4. `issueSessionKey(tx, attemptId, isResume)`: `crypto.randomBytes(32).toString('hex')`, stored on the attempt; on resume also a `NEW_SESSION` row (`counted: false`). Yazan calls it inside his start transaction.
+5. `AttemptSessionGuard`: only for an `IN_PROGRESS` attempt of this user; compares the `X-Attempt-Session` header with `attempt.sessionKey` → `409` message from `API.md` 19.4. Yazan adds it to `StudentAttemptsController`; you add it to `IntegrityController`.
 6. `getIntegrity(attemptId)` for the student attempt shape, `listViolations(attemptId)` for the instructor detail.
 7. Log `violation recorded`, `attempt terminated`, `session replaced`. Never log the session key.
 8. Tests in `api.http`: every row of the Integrity checklist in `API.md` 17.
@@ -719,7 +719,7 @@ Everything in `API.md`, section 19, and `PROJECT-STRUCTURE.md`, section 16.1.
 ## Esmaeel must NOT
 
 - write test content rules, publish rules, or execution code (Majed)
-- write attempt start, submit, run, timing, or scoring logic (Rami) — use `ScoringService`
+- write attempt start, submit, run, timing, or scoring logic (Yazan) — use `ScoringService`
 - write frontend code
 - run `prisma migrate reset` on shared data
 - change another module's DTOs
@@ -833,7 +833,7 @@ Unit-test it with: equal arrays, different order, nested objects with different 
 
 ## Dependencies
 
-- `AttemptStateService.hasAttempts`, `hasActiveAttempts`, `expireOverdue` — Rami (stubs from Phase 0).
+- `AttemptStateService.hasAttempts`, `hasActiveAttempts`, `expireOverdue` — Yazan (stubs from Phase 0).
 - Guards, pipe, filter, Prisma — Esmaeel (Phase 0).
 
 ## Majed must NOT
@@ -841,7 +841,7 @@ Unit-test it with: equal arrays, different order, nested objects with different 
 - run student code on the server (`eval`, `new Function`, `vm`, `child_process`)
 - send expected outputs to Judge0 or to the student
 - switch to mock mode automatically when Judge0 fails
-- write attempt, run-count, or scoring logic (Rami)
+- write attempt, run-count, or scoring logic (Yazan)
 - put a key in Git or in the frontend
 - write frontend code
 
@@ -861,7 +861,7 @@ Unit-test it with: equal arrays, different order, nested objects with different 
 
 ---
 
-# 10. Task 5 — Rami Al Shaar
+# 10. Task 5 — Yazan Shartooh
 
 ## Attempt state & timing + Student tests + Start + MCQ submit + Coding Run / Submit / Finish
 
@@ -966,7 +966,7 @@ Common checks for all three: `API.md` section 11 (code empty / too long in `Code
 - `buildAttemptOrder`, `applyQuestionOrder`, `applyOptionOrder` — Majed.
 - Guards, `ClockService`, `round1`, pipe, filter — Esmaeel (Phase 0).
 
-## Rami must NOT
+## Yazan must NOT
 
 - run, evaluate, or inspect student code himself (only through `CodeExecutionService`)
 - send `isCorrect` or hidden cases in any student response
@@ -991,7 +991,7 @@ Common checks for all three: `API.md` section 11 (code empty / too long in `Code
 - Submit works once per problem and stores counts and points.
 - Finish runs in one transaction; unsubmitted problems score 0.
 - No student response contains `isCorrect` or hidden cases (checked in Swagger and the Network tab).
-- Rami can explain the whole attempt flow.
+- Yazan can explain the whole attempt flow.
 
 ---
 
@@ -1001,11 +1001,11 @@ These names are fixed from Phase 0. Code against them even before the owner's PR
 
 | Used by | Provided by | Name |
 | --- | --- | --- |
-| Majed, Esmaeel, Rami | Rami | `AttemptStateService.expireOverdue()`, `hasAttempts(testId)`, `hasActiveAttempts(testId)`, `assertAcceptingRequests(attempt)` |
-| Rami | Majed | `CodeExecutionService.run(problem, code)`, `submit(problem, code)`, `getMode()` |
-| Rami | Majed | `buildAttemptOrder(questions)`, `applyQuestionOrder()`, `applyOptionOrder()` |
-| Esmaeel | Rami | `ScoringService.scoreMcqFromSaved(tx, attemptId)`, `scoreCoding(tx, attemptId)` |
-| Rami | Esmaeel | `IntegrityService.issueSessionKey(tx, attemptId, isResume)`, `getIntegrity(attemptId)`, `AttemptSessionGuard` |
+| Majed, Esmaeel, Yazan | Yazan | `AttemptStateService.expireOverdue()`, `hasAttempts(testId)`, `hasActiveAttempts(testId)`, `assertAcceptingRequests(attempt)` |
+| Yazan | Majed | `CodeExecutionService.run(problem, code)`, `submit(problem, code)`, `getMode()` |
+| Yazan | Majed | `buildAttemptOrder(questions)`, `applyQuestionOrder()`, `applyOptionOrder()` |
+| Esmaeel | Yazan | `ScoringService.scoreMcqFromSaved(tx, attemptId)`, `scoreCoding(tx, attemptId)` |
+| Yazan | Esmaeel | `IntegrityService.issueSessionKey(tx, attemptId, isResume)`, `getIntegrity(attemptId)`, `AttemptSessionGuard` |
 | Maya | Ali | `useFullscreen()`, `useExamGuard()`, `attachEditorPasteGuard()`, `FullscreenGate`, `ViolationWarningDialog` |
 | Everyone (backend) | Esmaeel | `ClockService.now()`, `round1()`, constants, `JwtAuthGuard`, `RolesGuard`, `@Roles()`, `@CurrentUser()`, id param DTOs |
 | Maya | Ali | `components/common/*` props, `http.ts` `request<T>()`, `ApiError`, `useAuth()`, `formatScore()` |
@@ -1101,7 +1101,7 @@ The presentation is in **English** and every member speaks. It must cover the 10
 | The problem and the product idea | Ali |
 | Main flow demo: instructor publishes → student takes tests in order → scores (frontend states: loading, empty, error, expired) | Maya |
 | Backend in Swagger: auth, roles, **403 for an unpublished test**, a rejected validation case | Esmaeel |
-| Business rule: backend-owned timing, grace, expiry, `null` vs `0`; the finish transaction | Rami |
+| Business rule: backend-owned timing, grace, expiry, `null` vs `0`; the finish transaction | Yazan |
 | Business rule: Run vs. Submit, hidden tests, the execution service, readable errors, mock mode | Majed |
 | Exam integrity live: leave full screen (warning), switch tab (terminated, score kept), the violation log; why the server decides and what a browser cannot prevent | Esmaeel + Maya |
 | Data in PostgreSQL (Prisma Studio), architecture (controller → service → persistence, execution service) | Esmaeel |
@@ -1144,7 +1144,7 @@ Format: `be/<module>-<description>` or `fe/<page>-<description>`.
 | Maya | `fe/server-clock-countdown`, `fe/student-contexts`, `fe/my-tests`, `fe/test-intro`, `fe/mcq-test`, `fe/code-editor`, `fe/coding-run`, `fe/coding-submit-finish`, `fe/my-results`, `fe/attempt-session`, `fe/exam-guard-wiring`, `fe/mcq-autosave` |
 | Esmaeel | `be/foundation-setup`, `be/prisma-schema`, `be/auth`, `be/roles-guard`, `be/seed`, `be/instructor-attempts`, `be/student-results`, `be/integrity-violations`, `be/integrity-session-guard`, `be/endpoint-tests` |
 | Majed | `be/execution-spike`, `be/tests-publish`, `be/tests-questions`, `be/tests-problems`, `be/execution-mock`, `be/execution-harness`, `be/execution-comparer`, `be/execution-errors`, `be/execution-judge0`, `be/mcq-seed`, `be/attempt-order` |
-| Rami | `be/attempt-state`, `be/scoring-service`, `be/student-tests`, `be/student-start`, `be/mcq-autosave`, `be/student-mcq-submit`, `be/coding-run`, `be/coding-submit`, `be/coding-finish` |
+| Yazan | `be/attempt-state`, `be/scoring-service`, `be/student-tests`, `be/student-start`, `be/mcq-autosave`, `be/student-mcq-submit`, `be/coding-run`, `be/coding-submit`, `be/coding-finish` |
 
 ## After your work
 
@@ -1265,7 +1265,7 @@ The project is built in phases. The hours are targets, not promises. Ask the ins
 - Ali: repository + frontend skeleton.
 - Esmaeel: backend skeleton + schema + migration + stubs.
 - Majed: execution spike.
-- Maya: student screen sketches. Rami: attempt state table.
+- Maya: student screen sketches. Yazan: attempt state table.
 
 Result: both skeletons on `main`, stubs answering, branch protection on, execution host chosen.
 
@@ -1273,7 +1273,7 @@ Result: both skeletons on `main`, stubs answering, branch protection on, executi
 
 **First small PRs (merge first, others depend on them):**
 
-1. Rami — `AttemptStateService` + `ScoringService`
+1. Yazan — `AttemptStateService` + `ScoringService`
 2. Esmaeel — real auth + guards
 3. Majed — execution types, interface, mock provider + `attempt-order.util.ts`
 4. Ali — shared UI + `format.ts`
@@ -1283,7 +1283,7 @@ Then:
 
 - Esmaeel — seed, integrity module (violations, termination, session guard), instructor attempts, student results, Swagger check
 - Majed — publish, questions, problems, MCQ seed, then harness → comparer → error normalizer → Judge0 provider
-- Rami — student tests, start (pledge, order, session), MCQ autosave + submit, then run → submit → finish
+- Yazan — student tests, start (pledge, order, session), MCQ autosave + submit, then run → submit → finish
 - Ali — auth pages, Test Management, Test Editor, exam-guard toolkit, Attempts (with the violation log)
 - Maya — contexts, My Tests, Test Intro, MCQ test with autosave, code editor, coding Run, Submit, Finish, My Results, then the exam-guard wiring
 
@@ -1294,13 +1294,13 @@ Phase 0 foundation
  ↓
 attempt-state + auth/guards + execution interface/mock + shared UI + countdown   (the "base" PRs)
  ↓
-content (Majed), student tests/start/MCQ (Rami), attempts/results (Esmaeel)
+content (Majed), student tests/start/MCQ (Yazan), attempts/results (Esmaeel)
  ↓
 integrity module (Esmaeel) + exam-guard toolkit (Ali)
  ↓
 harness → comparer → error normalizer → Judge0 provider (Majed)
  ↓
-coding run → submit → finish (Rami)
+coding run → submit → finish (Yazan)
  ↓
 pages replace the stub assumptions (Ali, Maya)
 ```
@@ -1503,10 +1503,10 @@ JOIN_CODE             = 8 characters, A–Z and 2–9, no 0/O/1/I   e.g. K7QM4XR
 | POST | `/instructor/tests/:testId/copy-from` | `{ sourceTestId }` — copy all content | INSTRUCTOR | Majed |
 | POST | `/instructor/tests/:testId/questions/copy` | `{ sourceQuestionId }` | INSTRUCTOR | Majed |
 | POST | `/instructor/tests/:testId/problems/copy` | `{ sourceProblemId }` | INSTRUCTOR | Majed |
-| GET / POST | `/instructor/cohorts/:cohortId/students` | List (`?search=&page=&limit=`) / create a student | INSTRUCTOR | Rami |
-| PATCH | `/instructor/students/:userId` | Edit name / email, enable / disable | INSTRUCTOR | Rami |
-| POST | `/instructor/students/:userId/reset-password` | `{ newPassword }` | INSTRUCTOR | Rami |
-| POST | `/instructor/students/:userId/sign-out` | End every session of the student | INSTRUCTOR | Rami |
+| GET / POST | `/instructor/cohorts/:cohortId/students` | List (`?search=&page=&limit=`) / create a student | INSTRUCTOR | Yazan |
+| PATCH | `/instructor/students/:userId` | Edit name / email, enable / disable | INSTRUCTOR | Yazan |
+| POST | `/instructor/students/:userId/reset-password` | `{ newPassword }` | INSTRUCTOR | Yazan |
+| POST | `/instructor/students/:userId/sign-out` | End every session of the student | INSTRUCTOR | Yazan |
 | GET | `/instructor/attempts?cohortId=&testId=&status=&search=` | + required `cohortId`, + `deviceSwitchCount` per row | INSTRUCTOR | Esmaeel |
 | GET | `/instructor/attempts/:attemptId` | + `violationSummary` | INSTRUCTOR | Esmaeel |
 | GET | `/instructor/alerts?cohortId=&severity=&unread=&page=&limit=` | Alerts, newest first | INSTRUCTOR | Esmaeel |
@@ -1529,7 +1529,7 @@ All existing instructor endpoints that take a `testId`, `questionId`, `problemId
 ### How a device switch works (A-6 + A-9)
 
 1. `POST /student/tests/:testId/attempts` on an attempt that is already `IN_PROGRESS` = a **resume** = a device switch. (The server cannot tell a new device from a closed tab on the same device. A refresh in the same tab keeps `sessionStorage` and is **not** a switch.)
-2. In the start transaction, Rami calls `integrityService.issueSessionKey(tx, attemptId, true)`. Esmaeel stores a counted `DEVICE_SWITCH` violation, creates a `DANGER` alert, and on the 3rd switch terminates the attempt with `ScoringService`.
+2. In the start transaction, Yazan calls `integrityService.issueSessionKey(tx, attemptId, true)`. Esmaeel stores a counted `DEVICE_SWITCH` violation, creates a `DANGER` alert, and on the 3rd switch terminates the attempt with `ScoringService`.
 3. The start response gets `deviceWarning` (the fixed warning, or `null`). If the switch terminated the attempt, the response is the finished attempt with its terminated result.
 4. A new student sign-in revokes the older sessions (A-9). The old device gets `401` on its next request and goes to `/sign-in` with the message. It is not a violation by itself; it becomes one only if the student then opens the running exam again (step 1).
 
@@ -1541,7 +1541,7 @@ All existing instructor endpoints that take a `testId`, `questionId`, `problemId
 | Maya | Student-side warnings, Students page, Question bank page | ~12 h |
 | Esmaeel | Schema + migration (first), auth sessions and roles, cohort access helper, device rule, alerts, attempts scope, seed | ~15 h |
 | Majed | Admin module (cities, cohorts, instructors), cohort tests, copy from bank, question bank | ~13 h |
-| Rami | Student flow per cohort, device switch in start, instructor student-management module | ~11 h |
+| Yazan | Student flow per cohort, device switch in start, instructor student-management module | ~11 h |
 
 ### Ali — contract, auth, admin and instructor screens
 
@@ -1568,8 +1568,8 @@ All existing instructor endpoints that take a `testId`, `questionId`, `problemId
 **New files:** `api/src/common/cohort-access.service.ts`, `api/src/alerts/` (module, controller, service, DTOs), `api/src/auth/session.service.ts`.
 
 - **Part A — Schema (first, Day 1 morning):** everything in 19.2 "Data" in one migration `alpha_cohorts`, including the data move for existing rows. Read the generated SQL. Stubs for every new endpoint (`// STUB`) so Ali and Maya can start.
-- **Part B — Sessions (A-9):** `UserSession` row on every sign-in; JWT payload `+ sid`; `JwtAuthGuard` checks the session is not revoked and the user is active (messages in 19.2); students: revoke older sessions on sign-in; `SessionService.revokeAll(userId, reason)` for Rami's "sign out everywhere".
-- **Part C — Roles and cohort access:** `ADMIN` in `RolesGuard`; `CohortAccessService.assertInstructorCohort(user, cohortId)` and `assertTestAccess / assertAttemptAccess` used by Majed, Rami and you. `ADMIN` always passes.
+- **Part B — Sessions (A-9):** `UserSession` row on every sign-in; JWT payload `+ sid`; `JwtAuthGuard` checks the session is not revoked and the user is active (messages in 19.2); students: revoke older sessions on sign-in; `SessionService.revokeAll(userId, reason)` for Yazan's "sign out everywhere".
+- **Part C — Roles and cohort access:** `ADMIN` in `RolesGuard`; `CohortAccessService.assertInstructorCohort(user, cohortId)` and `assertTestAccess / assertAttemptAccess` used by Majed, Yazan and you. `ADMIN` always passes.
 - **Part D — Register:** `joinCode` (trimmed, upper-cased) → cohort; messages from 19.2.
 - **Part E — Device rule (A-6):** `DEVICE` group in `IntegrityService` with `DEVICE_SWITCH_ALLOWED`; `issueSessionKey(tx, attemptId, isResume)` records the counted switch and returns `{ sessionKey, deviceWarning, terminated }`; termination in the same transaction, reason from 19.2.
 - **Part F — Alerts (A-7):** `AlertsService.createForViolation(tx, ...)` called for every **counted** violation (DEVICE_SWITCH → `DANGER`, others → `WARNING`) and `ATTEMPT_TERMINATED` (`DANGER`), inside the violation transaction. The four alert endpoints, scoped to the caller's cohorts, paginated `{ data, meta }`.
@@ -1587,7 +1587,7 @@ All existing instructor endpoints that take a `testId`, `questionId`, `problemId
 - **Part D — Copy (A-12):** `CopyService.copyTest / copyQuestion / copyProblem` (options and test cases included, new ids, positions appended at the end); target must be unlocked (`409`) and the same type (`400`); source is never changed; set `sourceTestId`.
 - **Part E — Bank:** list every test of every cohort (archived included) with city, cohort, type, counts; detail with full instructor content; paginated `{ data, meta }`; never reachable by students (`403`).
 
-### Rami — student flow per cohort, device switch, student management
+### Yazan — student flow per cohort, device switch, student management
 
 **New files:** `api/src/cohort-students/` (module, controller, service, DTOs).
 
@@ -1600,12 +1600,12 @@ All existing instructor endpoints that take a `testId`, `questionId`, `problemId
 ```text
 Day 1 morning   Ali: contract (Part A)  +  Esmaeel: schema, migration, stubs (Part A)
                 ↓  (everyone branches from main)
-Day 1 – Day 2   Esmaeel: sessions, roles, cohort access   ← Majed and Rami need CohortAccessService
+Day 1 – Day 2   Esmaeel: sessions, roles, cohort access   ← Majed and Yazan need CohortAccessService
                 Majed: admin module, tests per cohort, copy, bank
-                Rami: student tests per cohort, student management
+                Yazan: student tests per cohort, student management
                 Ali: auth, admin screens, cohort switcher      Maya: students page, bank page
                 ↓
-Day 2           Esmaeel: device rule + alerts  →  Rami: start/resume uses it  →  Maya: device warning
+Day 2           Esmaeel: device rule + alerts  →  Yazan: start/resume uses it  →  Maya: device warning
                 Ali: alerts page + attempts changes
                 ↓
 Day 3           integration on main, api-flow + api.http + full manual test (19.5), README demo accounts
