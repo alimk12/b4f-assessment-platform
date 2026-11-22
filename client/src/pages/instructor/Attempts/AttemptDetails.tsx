@@ -3,13 +3,27 @@ import Button from '../../../components/common/Button';
 import ErrorMessage from '../../../components/common/ErrorMessage';
 import Loading from '../../../components/common/Loading';
 import StateBadge from '../../../components/common/StateBadge';
-import { InstructorAttemptDetail } from '../../../types/instructor.types';
+import { InstructorAttemptDetail, VIOLATION_LABEL, ViolationSummary } from '../../../types/instructor.types';
 import { formatDateTime, formatDuration, formatScore } from '../../../utils/format';
 
-const VIOLATION_LABEL: Record<string, string> = {
-  FULLSCREEN_EXIT: 'Left full screen', TAB_HIDDEN: 'Switched tab / window', COPY: 'Copy', CUT: 'Cut',
-  PASTE_EXTERNAL: 'Paste from outside', DROP_EXTERNAL: 'Drop from outside', NEW_SESSION: 'Opened on another window/device',
-};
+/** Permanent violation summary, also after the attempt ended (A-8). */
+function SummaryBlock({ s }: { s: ViolationSummary }) {
+  const items = [
+    { label: 'Device switches', value: `${s.device.count} / ${s.device.allowed}`, danger: s.device.count > 0 },
+    { label: 'Full screen / tab', value: `${s.focus.count} / ${s.focus.limit}`, danger: false, hot: s.focus.count > 0 },
+    { label: 'Copy / paste', value: `${s.clipboard.count} / ${s.clipboard.limit}`, danger: false, hot: s.clipboard.count > 0 },
+  ];
+  return (
+    <div className="attempts-summary">
+      {items.map((i) => (
+        <div key={i.label} className={`attempts-summary__item${i.danger ? ' attempts-summary__item--danger' : i.hot ? ' attempts-summary__item--hot' : ''}`}>
+          <div className="attempts-summary__value">{i.value}</div>
+          <div className="attempts-summary__label">{i.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 interface Props { attempt: InstructorAttemptDetail | null; isLoading: boolean; error: string | null; onClose(): void }
 
@@ -41,6 +55,7 @@ export default function AttemptDetails({ attempt, isLoading, error, onClose }: P
               {attempt.mcq && (<><span className="attempts-details__label">Correct</span><span>{attempt.mcq.correctCount} / {attempt.mcq.totalCount}</span></>)}
             </div>
             {attempt.terminationReason && <div className="attempts-details__reason">{attempt.terminationReason}</div>}
+            {attempt.violationSummary && <SummaryBlock s={attempt.violationSummary} />}
             {attempt.problems && (
               <div className="attempts-details__section">
                 <h3>Problems</h3>
@@ -65,7 +80,7 @@ export default function AttemptDetails({ attempt, isLoading, error, onClose }: P
                   <thead><tr><th>Time</th><th>Event</th><th>Group</th><th>Counted</th></tr></thead>
                   <tbody>
                     {attempt.violations.map((v, i) => (
-                      <tr key={i}>
+                      <tr key={i} className={v.type === 'DEVICE_SWITCH' && v.counted ? 'attempts-log__danger' : undefined}>
                         <td>{new Date(v.occurredAt).toLocaleTimeString('en-GB')}</td>
                         <td>{VIOLATION_LABEL[v.type] ?? v.type}</td>
                         <td>{v.group}</td>

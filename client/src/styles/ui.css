@@ -31,3 +31,9 @@
 .ui-field { margin-bottom: 0.9rem; }
 .ui-muted { color: var(--color-text-muted); }
 .ui-table-wrap { overflow-x: auto; }
+.ui-pagination { display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-top: 1rem; flex-wrap: wrap; }
+.ui-badge--danger { color: var(--color-on-dark); background: var(--color-error); border-color: var(--color-error); }
+.ui-toolbar { display: flex; gap: 0.75rem; align-items: end; flex-wrap: wrap; margin-bottom: 1rem; }
+.ui-toolbar > div { min-width: 10rem; }
+.ui-form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: 0.75rem; align-items: end; }
+.ui-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0.08em; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: 0.1rem 0.4rem; }

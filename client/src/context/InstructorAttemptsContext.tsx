@@ -6,7 +6,8 @@ interface Value {
   attempts: InstructorAttemptRow[];
   isAttemptsLoading: boolean;
   attemptsError: string | null;
-  loadAttempts(filters: AttemptFilters): Promise<void>;
+  /** Attempts of one cohort (A-4). */
+  loadAttempts(cohortId: number, filters: AttemptFilters): Promise<void>;
   selectedAttempt: InstructorAttemptDetail | null;
   isDetailLoading: boolean;
   detailError: string | null;
@@ -25,11 +26,11 @@ export function InstructorAttemptsProvider({ children }: { children: ReactNode }
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
 
-  const loadAttempts = useCallback(async (f: AttemptFilters) => {
+  const loadAttempts = useCallback(async (cohortId: number, f: AttemptFilters) => {
     setIsAttemptsLoading(true);
     setAttemptsError(null);
     try {
-      setAttempts(await api.getInstructorAttempts(f));
+      setAttempts(await api.getInstructorAttempts(cohortId, f));
     } catch (e) {
       setAttemptsError(message(e));
     } finally {
