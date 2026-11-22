@@ -1,0 +1,18 @@
+.bank-page__search { flex: 1; min-width: 14rem; }
+.bank-page__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 0.75rem; }
+.bank-card { text-align: left; cursor: pointer; font: inherit; color: inherit; display: grid; gap: 0.35rem; }
+.bank-card:hover { border-color: var(--color-primary); }
+.bank-card__head { display: flex; justify-content: space-between; gap: 0.5rem; align-items: center; }
+.bank-card__badges { display: flex; gap: 0.3rem; flex-wrap: wrap; align-items: center; }
+.bank-card__meta { color: var(--color-text-muted); font-size: 0.85rem; }
+.bank-card__mine { font-size: 0.72rem; font-weight: 800; color: var(--color-primary); background: var(--color-primary-light); border-radius: 999px; padding: 0.05rem 0.5rem; }
+.bank-view__header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin: 0.75rem 0 1rem; }
+.bank-view__title { margin: 0 0 0.35rem; }
+.bank-view__item { margin-bottom: 0.75rem; }
+.bank-view__item-head { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+.bank-view__options { margin: 0.5rem 0 0; padding-left: 1.25rem; }
+.bank-view__option--correct { color: var(--color-success); font-weight: 600; }
+.bank-view__correct { font-size: 0.75rem; }
+.bank-view__description { white-space: pre-wrap; color: var(--color-text-muted); }
+.bank-view__cases code { font-size: 0.8rem; }
+.bank-copy__done { background: var(--color-success-light); color: var(--color-success); border-radius: var(--radius); padding: 0.6rem 0.8rem; font-weight: 600; }

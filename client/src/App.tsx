@@ -5,7 +5,9 @@ import { AttemptProvider } from './context/AttemptContext';
 import { AuthProvider } from './context/AuthContext';
 import { CohortProvider } from './context/CohortContext';
 import { InstructorAttemptsProvider } from './context/InstructorAttemptsContext';
+import { InstructorStudentsProvider } from './context/InstructorStudentsContext';
 import { InstructorTestsProvider } from './context/InstructorTestsContext';
+import { QuestionBankProvider } from './context/QuestionBankContext';
 import { StudentTestsProvider } from './context/StudentTestsContext';
 import AppRouter from './routes/AppRouter';
 
@@ -18,11 +20,15 @@ export default function App() {
             <AdminProvider>
               <InstructorTestsProvider>
                 <InstructorAttemptsProvider>
-                  <StudentTestsProvider>
-                    <AttemptProvider>
-                      <AppRouter />
-                    </AttemptProvider>
-                  </StudentTestsProvider>
+                  <InstructorStudentsProvider>
+                    <QuestionBankProvider>
+                      <StudentTestsProvider>
+                        <AttemptProvider>
+                          <AppRouter />
+                        </AttemptProvider>
+                      </StudentTestsProvider>
+                    </QuestionBankProvider>
+                  </InstructorStudentsProvider>
                 </InstructorAttemptsProvider>
               </InstructorTestsProvider>
             </AdminProvider>
