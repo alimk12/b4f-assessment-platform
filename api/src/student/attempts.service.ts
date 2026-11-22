@@ -49,7 +49,7 @@ export class AttemptsService {
           const problems = await tx.problem.findMany({ where: { testId }, select: { id: true } });
           await tx.problemResult.createMany({ data: problems.map((p) => ({ attemptId: attempt.id, problemId: p.id })) });
         }
-        const key = await this.integrity.issueSessionKey(tx, attempt.id, false);
+        const { sessionKey: key } = await this.integrity.issueSessionKey(tx, attempt.id, false);
         return { id: attempt.id, key };
       });
       this.logger.log(`Attempt started: ${id} (user ${userId}, test ${testId})`);
@@ -65,8 +65,8 @@ export class AttemptsService {
 
   private async resume(attemptId: number, status: string) {
     if (status !== 'IN_PROGRESS') throw new ConflictException('You have already finished this test.');
-    const key = await this.prisma.$transaction((tx) => this.integrity.issueSessionKey(tx, attemptId, true));
-    return { created: false, view: await this.view(attemptId, key) };
+    const issued = await this.prisma.$transaction((tx) => this.integrity.issueSessionKey(tx, attemptId, true));
+    return { created: false, view: await this.view(attemptId, issued.sessionKey) };
   }
 
   async getForStudent(userId: number, attemptId: number) {
