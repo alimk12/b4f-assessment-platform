@@ -1,23 +1,23 @@
 # Replace the placeholders with GitHub usernames before enabling branch protection.
 # Ownership follows docs/PROJECT-STRUCTURE.md §12.
 
-/docs/                         @ali-github-username
-/client/                       @ali-github-username @maya-github-username
-/client/src/pages/student/     @maya-github-username
-/client/src/editor/CodeEditor* @maya-github-username
-/api/                          @esmaeel-github-username @majed-github-username @rami-github-username
+/docs/                         @alimk12
+/client/                       @alimk12 @Ma7yaa
+/client/src/pages/student/     @Ma7yaa
+/client/src/editor/CodeEditor* @Ma7yaa
+/api/                          @Esmaeel-Mahfoud @majedhmoud @Yazan-Shartooh
 
 # Alpha (docs/PROJECT-STRUCTURE.md §17.9). The last matching line wins, so keep these at the end.
-/client/src/pages/instructor/Students/       @maya-github-username
-/client/src/pages/instructor/QuestionBank/   @maya-github-username
-/client/src/context/InstructorStudentsContext.tsx @maya-github-username
-/client/src/context/QuestionBankContext.tsx  @maya-github-username
-/client/src/services/students.api.ts         @maya-github-username
-/client/src/services/bank.api.ts             @maya-github-username
-/client/src/types/students.types.ts          @maya-github-username
-/client/src/types/bank.types.ts              @maya-github-username
-/api/src/alerts/                             @esmaeel-github-username
-/api/prisma/                                 @esmaeel-github-username
-/api/src/admin/                              @majed-github-username
-/api/src/bank/                               @majed-github-username
-/api/src/cohort-students/                    @rami-github-username
+/client/src/pages/instructor/Students/       @Ma7yaa
+/client/src/pages/instructor/QuestionBank/   @Ma7yaa
+/client/src/context/InstructorStudentsContext.tsx @Ma7yaa
+/client/src/context/QuestionBankContext.tsx  @Ma7yaa
+/client/src/services/students.api.ts         @Ma7yaa
+/client/src/services/bank.api.ts             @Ma7yaa
+/client/src/types/students.types.ts          @Ma7yaa
+/client/src/types/bank.types.ts              @Ma7yaa
+/api/src/alerts/                             @Esmaeel-Mahfoud
+/api/prisma/                                 @Esmaeel-Mahfoud
+/api/src/admin/                              @majedhmoud
+/api/src/bank/                               @majedhmoud
+/api/src/cohort-students/                    @Yazan-Shartooh
