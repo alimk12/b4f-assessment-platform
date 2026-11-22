@@ -9,6 +9,11 @@ const MAP: Record<string, { label: string; tone: string }> = {
   PUBLISHED: { label: 'Published', tone: 'primary' },
   MCQ: { label: 'Multiple choice', tone: 'muted' },
   CODING: { label: 'Coding', tone: 'muted' },
+  ACTIVE: { label: 'Active', tone: 'success' },
+  ARCHIVED: { label: 'Archived', tone: 'muted' },
+  DISABLED: { label: 'Disabled', tone: 'error' },
+  DANGER: { label: 'Danger', tone: 'danger' },
+  WARNING: { label: 'Warning', tone: 'warning' },
 };
 
 export default function StateBadge({ state }: { state: string }) {

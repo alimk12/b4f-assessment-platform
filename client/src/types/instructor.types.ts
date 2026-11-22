@@ -24,10 +24,24 @@ export interface InstructorAttemptRow {
   test: { id: number; title: string; type: TestType };
   status: AttemptStatus; startedAt: string; deadline: string; submittedAt: string | null; terminatedAt: string | null;
   timeUsedSeconds: number | null; score: number | null; violationCount: number; terminationReason: string | null;
+  deviceSwitchCount: number;
+}
+export interface ViolationSummary {
+  device: { count: number; allowed: number };
+  focus: { count: number; limit: number };
+  clipboard: { count: number; limit: number };
 }
 export interface InstructorAttemptDetail extends InstructorAttemptRow {
+  violationSummary: ViolationSummary;
   mcq?: { correctCount: number; totalCount: number };
   problems?: { problemId: number; title: string; runCount: number; submitted: boolean; passedCount: number | null; totalCount: number | null; points: number | null }[];
   violations: { type: ViolationType; group: ViolationGroup; counted: boolean; occurredAt: string }[];
 }
 export interface AttemptFilters { testId?: string; status?: string; search?: string }
+
+/** Labels for the violation log (instructor screens). */
+export const VIOLATION_LABEL: Record<string, string> = {
+  FULLSCREEN_EXIT: 'Left full screen', TAB_HIDDEN: 'Switched tab / window', COPY: 'Copy', CUT: 'Cut',
+  PASTE_EXTERNAL: 'Paste from outside', DROP_EXTERNAL: 'Drop from outside', NEW_SESSION: 'Opened on another window/device',
+  DEVICE_SWITCH: 'Opened on another device',
+};

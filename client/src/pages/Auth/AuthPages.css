@@ -6,3 +6,6 @@
 .auth-card__footer { margin-top: 1rem; text-align: center; font-size: 0.9rem; color: var(--color-text-muted); }
 .auth-card__field-error { color: var(--color-error); font-size: 0.8rem; margin-top: 0.25rem; }
 .auth-card__demo { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px dashed var(--color-border); font-size: 0.8rem; color: var(--color-text-muted); }
+.auth-card__notice { background: var(--color-warning-light); color: var(--color-text); border: 1px solid var(--color-warning); border-radius: var(--radius); padding: 0.7rem 0.9rem; margin-bottom: 1rem; font-weight: 600; }
+.auth-card__code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 0.15em; text-transform: uppercase; }
+.auth-card__hint { color: var(--color-text-muted); font-size: 0.8rem; margin-top: 0.25rem; }
