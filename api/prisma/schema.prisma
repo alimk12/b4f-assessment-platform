@@ -8,8 +8,30 @@ datasource db {
 }
 
 enum Role {
+  ADMIN
   INSTRUCTOR
   STUDENT
+}
+
+enum CohortStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum AlertSeverity {
+  DANGER
+  WARNING
+}
+
+enum AlertType {
+  DEVICE_SWITCH
+  FULLSCREEN_EXIT
+  TAB_HIDDEN
+  COPY
+  CUT
+  PASTE_EXTERNAL
+  DROP_EXTERNAL
+  ATTEMPT_TERMINATED
 }
 
 enum TestType {
@@ -36,7 +58,8 @@ enum ViolationType {
   CUT
   PASTE_EXTERNAL
   DROP_EXTERNAL
-  NEW_SESSION
+  NEW_SESSION // old rows only (before Alpha)
+  DEVICE_SWITCH // sent by the server only
 }
 
 enum TestCaseVisibility {
@@ -45,14 +68,22 @@ enum TestCaseVisibility {
 }
 
 model User {
-  id           Int       @id @default(autoincrement())
-  fullName     String    @map("full_name")
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  role         Role
-  createdAt    DateTime  @default(now()) @map("created_at")
-  attempts     Attempt[]
+  id                Int                @id @default(autoincrement())
+  fullName          String             @map("full_name")
+  email             String             @unique
+  passwordHash      String             @map("password_hash")
+  role              Role
+  cohortId          Int?               @map("cohort_id")
+  isActive          Boolean            @default(true) @map("is_active")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  cohort            Cohort?            @relation(fields: [cohortId], references: [id], onDelete: Restrict)
+  attempts          Attempt[]
+  instructorCohorts CohortInstructor[]
+  sessions          UserSession[]
+  alertsAbout       Alert[]            @relation("AlertStudent")
+  alertsRead        Alert[]            @relation("AlertReader")
 
+  @@index([cohortId])
   @@map("users")
 }
 
@@ -60,14 +91,90 @@ model Test {
   id              Int        @id @default(autoincrement())
   title           String
   type            TestType
-  order           Int        @unique
+  order           Int
   durationMinutes Int        @map("duration_minutes")
   status          TestStatus @default(DRAFT)
+  cohortId        Int        @map("cohort_id")
+  sourceTestId    Int?       @map("source_test_id")
+  cohort          Cohort     @relation(fields: [cohortId], references: [id], onDelete: Restrict)
   questions       Question[]
   problems        Problem[]
   attempts        Attempt[]
 
+  @@unique([cohortId, order])
   @@map("tests")
+}
+
+model City {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  cohorts   Cohort[]
+
+  @@map("cities")
+}
+
+model Cohort {
+  id          Int                @id @default(autoincrement())
+  name        String
+  cityId      Int                @map("city_id")
+  joinCode    String             @unique @map("join_code")
+  status      CohortStatus       @default(ACTIVE)
+  createdAt   DateTime           @default(now()) @map("created_at")
+  archivedAt  DateTime?          @map("archived_at")
+  city        City               @relation(fields: [cityId], references: [id], onDelete: Restrict)
+  students    User[]
+  tests       Test[]
+  instructors CohortInstructor[]
+  alerts      Alert[]
+
+  @@unique([cityId, name])
+  @@map("cohorts")
+}
+
+model CohortInstructor {
+  cohortId  Int      @map("cohort_id")
+  userId    Int      @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  cohort    Cohort   @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([cohortId, userId])
+  @@map("cohort_instructors")
+}
+
+model UserSession {
+  id           Int       @id @default(autoincrement())
+  userId       Int       @map("user_id")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  lastSeenAt   DateTime  @default(now()) @map("last_seen_at")
+  revokedAt    DateTime? @map("revoked_at")
+  revokeReason String?   @map("revoke_reason")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@map("user_sessions")
+}
+
+model Alert {
+  id        Int           @id @default(autoincrement())
+  cohortId  Int           @map("cohort_id")
+  attemptId Int           @map("attempt_id")
+  studentId Int           @map("student_id")
+  type      AlertType
+  severity  AlertSeverity
+  message   String
+  createdAt DateTime      @default(now()) @map("created_at")
+  readAt    DateTime?     @map("read_at")
+  readById  Int?          @map("read_by_id")
+  cohort    Cohort        @relation(fields: [cohortId], references: [id], onDelete: Cascade)
+  attempt   Attempt       @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  student   User          @relation("AlertStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  readBy    User?         @relation("AlertReader", fields: [readById], references: [id], onDelete: SetNull)
+
+  @@index([cohortId, readAt])
+  @@index([cohortId, createdAt])
+  @@map("alerts")
 }
 
 model Question {
@@ -140,6 +247,7 @@ model Attempt {
   mcqAnswers        McqAnswer[]
   problemResults    ProblemResult[]
   violations        AttemptViolation[]
+  alerts            Alert[]
 
   @@unique([userId, testId])
   @@index([testId, status])
