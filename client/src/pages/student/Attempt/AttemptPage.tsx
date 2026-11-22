@@ -67,7 +67,7 @@ export default function AttemptPage() {
     return (
       <div className="ui-card attempt__session">
         <h2>This attempt is open in another window or device.</h2>
-        <p className="ui-muted">Only one window can take the exam at a time. Continuing here closes the other window's session and counts as a device change (2 are allowed, the 3rd ends your exam).</p>
+        <p className="ui-muted">Only one window can take the exam at a time. Continuing here closes the other window's session.</p>
         <Button onClick={resumeHere} isLoading={isResuming} disabled={!attempt}>Continue here</Button>
         {!attempt && <p style={{ marginTop: '1rem' }}><Link to="/student/tests">Back to My Tests</Link> and press Continue.</p>}
       </div>

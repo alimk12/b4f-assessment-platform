@@ -41,19 +41,9 @@ export class StudentTestsService {
     };
   }
 
-  /**
-   * The tests a student can see (A-1, A-3): only their own cohort's tests, and none when the cohort is archived.
-   * "Previous test" (R-2) is looked up inside the same list, so it means order - 1 in the same cohort.
-   */
-  async cohortTests(userId: number): Promise<Test[]> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { cohort: { select: { id: true, status: true } } } });
-    if (!user?.cohort || user.cohort.status !== 'ACTIVE') return [];
-    return this.prisma.test.findMany({ where: { cohortId: user.cohort.id }, orderBy: { order: 'asc' } });
-  }
-
   private async context(userId: number) {
     await this.attemptState.expireOverdue();
-    const all = await this.cohortTests(userId);
+    const all = await this.prisma.test.findMany({ orderBy: { order: 'asc' } });
     const attempts = await this.prisma.attempt.findMany({ where: { userId } });
     return { all, attempts };
   }
@@ -75,7 +65,7 @@ export class StudentTestsService {
   }
 
   async assertCanStart(userId: number, test: Test) {
-    const all = await this.cohortTests(userId);
+    const all = await this.prisma.test.findMany({ orderBy: { order: 'asc' } });
     const attempts = await this.prisma.attempt.findMany({ where: { userId } });
     const reason = this.lockReason(test, all, attempts);
     if (reason) {

@@ -19,10 +19,4 @@ export class RegisterDto {
   @IsString({ message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` })
   @MinLength(MIN_PASSWORD_LENGTH, { message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` })
   password: string;
-
-  @ApiProperty({ example: 'K7QM4XRT', description: 'The cohort join code from the instructor (Alpha A-11)' })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toUpperCase() : value))
-  @IsString({ message: 'Cohort code is required.' })
-  @IsNotEmpty({ message: 'Cohort code is required.' })
-  joinCode: string;
 }

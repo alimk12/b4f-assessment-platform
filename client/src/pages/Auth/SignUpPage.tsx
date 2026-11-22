@@ -11,16 +11,15 @@ export default function SignUpPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [joinCode, setJoinCode] = useState('');
   const [fieldError, setFieldError] = useState<string | null>(null);
 
   if (user) return <Navigate to="/" replace />;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim() || !email.trim() || !password || !joinCode.trim()) return setFieldError('Please fill in all fields.');
+    if (!fullName.trim() || !email.trim() || !password) return setFieldError('Please fill in all fields.');
     setFieldError(null);
-    if (await signUp({ fullName: fullName.trim(), email: email.trim(), password, joinCode: joinCode.trim() })) navigate('/');
+    if (await signUp({ fullName: fullName.trim(), email: email.trim(), password })) navigate('/');
   };
 
   return (
@@ -29,12 +28,6 @@ export default function SignUpPage() {
         <h1 className="auth-card__title">Create account</h1>
         <p className="auth-card__subtitle">Student sign up</p>
         {authError && <ErrorMessage message={authError} />}
-        <div className="ui-field">
-          <label htmlFor="joinCode">Cohort code</label>
-          <input id="joinCode" className="auth-card__code" autoComplete="off" spellCheck={false} maxLength={12}
-            placeholder="e.g. K7QM4XRT" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} />
-          <div className="auth-card__hint">Your instructor gives you this code.</div>
-        </div>
         <div className="ui-field">
           <label htmlFor="fullName">Full name</label>
           <input id="fullName" autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} />

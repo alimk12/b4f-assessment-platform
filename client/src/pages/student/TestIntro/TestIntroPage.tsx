@@ -63,9 +63,6 @@ export default function TestIntroPage() {
           <li>The test runs in <strong>full screen</strong>.</li>
           <li className="test-intro__rule--strong">Leaving full screen or switching tabs: the first time is a warning, the second time ends your exam.</li>
           <li className="test-intro__rule--strong">Copy, cut or paste from outside: two warnings, the third time ends your exam.</li>
-          <li className="test-intro__rule--strong">
-            Opening the exam again on another device, or after closing the tab, counts as a device change: two are allowed, the third ends your exam. Refreshing the same tab is fine.
-          </li>
           <li>If your exam is ended, your score counts only what you saved before that moment.</li>
           {test.type === 'CODING' && <li>Inside the code editor, copy and paste of your own code works normally.</li>}
         </ul>

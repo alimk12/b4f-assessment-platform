@@ -8,19 +8,8 @@ export class ApiError extends Error {
   }
 }
 
-/** Called with the backend message on every 401 (except sign-in), e.g. "signed out because ... another device". */
-let onUnauthorized: ((message: string) => void) | null = null;
-export function setUnauthorizedHandler(fn: ((message: string) => void) | null) { onUnauthorized = fn; }
-
-/** Builds "?a=1&b=x" from the defined, non-empty values. */
-export function qs(params: Record<string, string | number | boolean | undefined | null>): string {
-  const q = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && String(v).trim() !== '') q.set(k, String(v).trim());
-  });
-  const s = q.toString();
-  return s ? `?${s}` : '';
-}
+let onUnauthorized: (() => void) | null = null;
+export function setUnauthorizedHandler(fn: (() => void) | null) { onUnauthorized = fn; }
 
 export async function request<T>(path: string, options: { method?: string; body?: unknown; headers?: Record<string, string> } = {}): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(options.headers ?? {}) };
@@ -38,9 +27,8 @@ export async function request<T>(path: string, options: { method?: string; body?
   }
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    const msg = (data && data.message) || 'Something went wrong. Please try again.';
-    if (res.status === 401 && onUnauthorized && !path.startsWith('/auth/login')) onUnauthorized(msg);
-    throw new ApiError(res.status, msg);
+    if (res.status === 401 && onUnauthorized && !path.startsWith('/auth/login')) onUnauthorized();
+    throw new ApiError(res.status, (data && data.message) || 'Something went wrong. Please try again.');
   }
   return data as T;
 }

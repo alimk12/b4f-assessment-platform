@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import './AuthPages.css';
 
 export default function SignInPage() {
-  const { user, signIn, authError, isAuthLoading, signedOutReason } = useAuth();
+  const { user, signIn, authError, isAuthLoading } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,7 +26,6 @@ export default function SignInPage() {
       <form className="ui-card auth-card" onSubmit={onSubmit} noValidate>
         <h1 className="auth-card__title">Sign in</h1>
         <p className="auth-card__subtitle">B4F Assessment Platform</p>
-        {signedOutReason && !authError && <div className="auth-card__notice" role="status">{signedOutReason}</div>}
         {authError && <ErrorMessage message={authError} />}
         <div className="ui-field">
           <label htmlFor="email">Email</label>
@@ -41,7 +40,7 @@ export default function SignInPage() {
         <div className="auth-card__footer">No account yet? <Link to="/sign-up">Create a student account</Link></div>
         {import.meta.env.DEV && (
           <div className="auth-card__demo">
-            Demo accounts (seed): admin@b4f.local / Admin123 · instructor@b4f.local / Instructor123 · lina@b4f.local / Student123
+            Demo accounts (seed): instructor@b4f.local / Instructor123 · lina@b4f.local / Student123
           </div>
         )}
       </form>

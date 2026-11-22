@@ -92,8 +92,6 @@ export function AttemptProvider({ children }: { children: ReactNode }) {
       const a = await api.startAttempt(testId, acceptedRules);
       if (a.sessionKey) saveAttemptSession(a.id, a.sessionKey);
       accept(a);
-      // A-6: re-opening a running exam is a device change; the server sends the warning to show.
-      setLastWarning(a.deviceWarning ?? null);
       setIsSessionReplaced(false);
       setRunResults({});
       setSubmitResults({});
@@ -214,11 +212,7 @@ export function AttemptProvider({ children }: { children: ReactNode }) {
     for (let i = 0; i < 2; i++) {
       try {
         const r = await api.reportViolation(a.id, type);
-        setIntegrity({
-          focusViolations: r.focusViolations, focusLimit: r.focusLimit,
-          clipboardViolations: r.clipboardViolations, clipboardLimit: r.clipboardLimit,
-          deviceSwitches: r.deviceSwitches, deviceAllowed: r.deviceAllowed,
-        });
+        setIntegrity({ focusViolations: r.focusViolations, focusLimit: r.focusLimit, clipboardViolations: r.clipboardViolations, clipboardLimit: r.clipboardLimit });
         if (r.warning) setLastWarning(r.warning);
         if (r.terminated) {
           setLastWarning(null);

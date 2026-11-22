@@ -6,8 +6,7 @@ interface Value {
   tests: InstructorTestSummary[];
   isTestsLoading: boolean;
   testsError: string | null;
-  /** The three tests of one cohort (A-1). */
-  loadTests(cohortId: number): Promise<void>;
+  loadTests(): Promise<void>;
   currentTest: InstructorTestDetail | null;
   isTestLoading: boolean;
   testError: string | null;
@@ -35,24 +34,18 @@ export function InstructorTestsProvider({ children }: { children: ReactNode }) {
   const [testError, setTestError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [testsCohortId, setTestsCohortId] = useState<number | null>(null);
 
-  const loadTests = useCallback(async (cohortId: number) => {
-    setTestsCohortId(cohortId);
+  const loadTests = useCallback(async () => {
     setIsTestsLoading(true);
     setTestsError(null);
     try {
-      setTests(await api.getInstructorTests(cohortId));
+      setTests(await api.getInstructorTests());
     } catch (e) {
       setTestsError(message(e));
     } finally {
       setIsTestsLoading(false);
     }
   }, []);
-
-  const reloadTests = useCallback(async () => {
-    if (testsCohortId) setTests(await api.getInstructorTests(testsCohortId));
-  }, [testsCohortId]);
 
   const loadTest = useCallback(async (testId: number) => {
     setIsTestLoading(true);
@@ -88,15 +81,15 @@ export function InstructorTestsProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Value>(
     () => ({
       tests, isTestsLoading, testsError, loadTests, currentTest, isTestLoading, testError, loadTest, isSaving, actionError,
-      publishTest: (id) => act(() => api.publishTest(id), reloadTests),
-      unpublishTest: (id) => act(() => api.unpublishTest(id), reloadTests),
+      publishTest: (id) => act(() => api.publishTest(id), loadTests),
+      unpublishTest: (id) => act(() => api.unpublishTest(id), loadTests),
       saveQuestion: (testId, p, qid) => act(() => (qid ? api.replaceQuestion(qid, p) : api.createQuestion(testId, p)), reloadCurrent),
       deleteQuestion: (qid) => act(() => api.deleteQuestion(qid), reloadCurrent),
       saveProblem: (testId, p, pid) => act(() => (pid ? api.replaceProblem(pid, p) : api.createProblem(testId, p)), reloadCurrent),
       deleteProblem: (pid) => act(() => api.deleteProblem(pid), reloadCurrent),
       clearActionError: () => setActionError(null),
     }),
-    [tests, isTestsLoading, testsError, loadTests, currentTest, isTestLoading, testError, loadTest, isSaving, actionError, act, reloadCurrent, reloadTests],
+    [tests, isTestsLoading, testsError, loadTests, currentTest, isTestLoading, testError, loadTest, isSaving, actionError, act, reloadCurrent],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

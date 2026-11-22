@@ -11,11 +11,7 @@ export interface StudentProblem {
   sample: { args: unknown[]; expected: unknown } | null; runCount: number; runsRemaining: number;
   submission: { passedCount: number; totalCount: number; points: number; submittedAt: string } | null;
 }
-export interface AttemptIntegrity {
-  focusViolations: number; focusLimit: number; clipboardViolations: number; clipboardLimit: number;
-  /** Alpha A-6: counted device changes, and how many are allowed before the exam ends. */
-  deviceSwitches: number; deviceAllowed: number;
-}
+export interface AttemptIntegrity { focusViolations: number; focusLimit: number; clipboardViolations: number; clipboardLimit: number }
 export interface AttemptResultInfo {
   score: number | null; label: string; correctCount?: number; totalCount?: number; terminationReason?: string;
   problems?: { problemId: number; title: string; submitted: boolean; points: number }[];
@@ -25,8 +21,6 @@ export interface StudentAttempt {
   startedAt: string; deadline: string; serverNow: string; submittedAt: string | null; terminatedAt: string | null;
   sessionKey: string | null; questions: StudentQuestion[] | null; problems: StudentProblem[] | null;
   executionMode: ExecutionMode | null; integrity: AttemptIntegrity; result: AttemptResultInfo | null;
-  /** Only in the start / resume response: the device-change warning (A-6), otherwise null. */
-  deviceWarning?: string | null;
 }
 export interface McqAnswerPayload { questionId: number; optionId: number }
 export interface ViolationResult extends AttemptIntegrity {

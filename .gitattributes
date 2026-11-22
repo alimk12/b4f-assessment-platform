@@ -1,3 +1,0 @@
-# Prisma checks each migration with a checksum of its bytes: keep .sql files with LF on every OS,
-# otherwise a Windows checkout (CRLF) looks like an edited migration.
-*.sql text eol=lf

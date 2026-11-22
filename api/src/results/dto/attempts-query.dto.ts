@@ -1,14 +1,8 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class AttemptsQueryDto {
-  @ApiProperty({ example: 1, description: 'Required since Alpha (API.md §20.5)' })
-  @Type(() => Number)
-  @IsInt({ message: 'cohortId must be a positive whole number.' })
-  @Min(1, { message: 'cohortId must be a positive whole number.' })
-  cohortId: number;
-
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()
   @Type(() => Number)
