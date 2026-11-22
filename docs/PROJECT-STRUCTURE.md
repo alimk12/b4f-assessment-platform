@@ -926,18 +926,18 @@ Seed accounts are listed in the README (local development only).
 | --- | --- | --- |
 | `ClockService` | `now()` | Esmaeel |
 | `AuthService` | `register(dto)`, `login(dto)`, `getMe(userId)` | Esmaeel |
-| `AttemptStateService` | `expireOverdue()`, `isOverdue(attempt, now)`, `assertAcceptingRequests(attempt)` (`409` for SUBMITTED / TERMINATED; stores EXPIRED and throws `409` when late), `hasAttempts(testId)`, `hasActiveAttempts(testId)` | Rami |
-| `ScoringService` | `scoreMcqFromSaved(tx, attemptId)` → `{ correctCount, totalCount, score }`, `scoreCoding(tx, attemptId)` → `{ score, problems }` (sets unsubmitted points to 0) | Rami |
+| `AttemptStateService` | `expireOverdue()`, `isOverdue(attempt, now)`, `assertAcceptingRequests(attempt)` (`409` for SUBMITTED / TERMINATED; stores EXPIRED and throws `409` when late), `hasAttempts(testId)`, `hasActiveAttempts(testId)` | Yazan |
+| `ScoringService` | `scoreMcqFromSaved(tx, attemptId)` → `{ correctCount, totalCount, score }`, `scoreCoding(tx, attemptId)` → `{ score, problems }` (sets unsubmitted points to 0) | Yazan |
 | `IntegrityService` | `recordViolation(userId, attemptId, type)` → `ViolationResult`, `issueSessionKey(tx, attemptId, isResume)` → `string` (logs `NEW_SESSION` on resume), `getIntegrity(attemptId)` → `AttemptIntegrity`, `listViolations(attemptId)` | Esmaeel |
 | `attempt-order.util.ts` | `buildAttemptOrder(questions)` → `{ questionOrder, optionOrder }`, `applyQuestionOrder(questions, order)`, `applyOptionOrder(options, order)` (pure functions) | Majed |
 | `InstructorTestsService` | `findAll()`, `findOne(testId)`, `publish(testId)`, `unpublish(testId)`, `assertContentEditable(testId)` | Majed |
 | `QuestionsService` | `create(testId, dto)`, `replace(questionId, dto)`, `remove(questionId)` | Majed |
 | `ProblemsService` | `create(testId, dto)`, `replace(problemId, dto)`, `remove(problemId)` | Majed |
 | `CodeExecutionService` | `getMode()`, `run(problem, code)` → `ExecutionRunOutcome`, `submit(problem, code)` → `ExecutionSubmitOutcome` | Majed |
-| `StudentTestsService` | `listForStudent(userId)`, `getForStudent(userId, testId)`, `assertCanStart(userId, test)` | Rami |
-| `AttemptsService` | `start(userId, testId)`, `getForStudent(userId, attemptId)` | Rami |
-| `McqService` | `saveAnswer(userId, attemptId, questionId, dto)`, `submit(userId, attemptId, dto)` | Rami |
-| `CodingService` | `run(userId, attemptId, problemId, code)`, `submit(userId, attemptId, problemId, code)`, `finish(userId, attemptId)` | Rami |
+| `StudentTestsService` | `listForStudent(userId)`, `getForStudent(userId, testId)`, `assertCanStart(userId, test)` | Yazan |
+| `AttemptsService` | `start(userId, testId)`, `getForStudent(userId, attemptId)` | Yazan |
+| `McqService` | `saveAnswer(userId, attemptId, questionId, dto)`, `submit(userId, attemptId, dto)` | Yazan |
+| `CodingService` | `run(userId, attemptId, problemId, code)`, `submit(userId, attemptId, problemId, code)`, `finish(userId, attemptId)` | Yazan |
 | `ResultsService` | `listAttempts(query)`, `getAttemptDetail(attemptId)`, `listStudentResults(userId)` | Esmaeel |
 
 `ExecutionRunOutcome` and `ExecutionSubmitOutcome` live in `execution/execution.types.ts`:
@@ -1031,7 +1031,7 @@ export class InstructorTestsController { ... }
 - `RolesGuard` reads `@Roles(...)`. Wrong role → `403 You do not have permission to do this.`
 - `@CurrentUser()` returns `JwtPayload` (`sub`, `email`, `role`).
 
-### 7.7 Response shaping (Rami)
+### 7.7 Response shaping (Yazan)
 
 `student/mappers/student-view.mapper.ts` is the **only** place that builds student responses for attempts:
 
@@ -1199,7 +1199,7 @@ One owner for every file. Edit only your own files.
 | --- | --- |
 | Esmaeel | `main.ts`, `app.module.ts`, `common/`, `prisma/` (module + service), `auth/`, `integrity/`, `results/`, `api/prisma/schema.prisma`, `api/prisma/migrations/`, `api/prisma/seed.ts`, `seed-data/users.ts`, `api/requests/api.http`, `api/.env.example` |
 | Majed | `tests/` (with `attempt-order.util.ts`), `execution/`, `seed-data/mcq-questions.ts`, `seed-data/coding-problems.ts` |
-| Rami | `attempt-state/`, `student/` |
+| Yazan | `attempt-state/`, `student/` |
 
 ### Docs and repository
 
@@ -1257,7 +1257,7 @@ Before the final demo, run the full test in `docs/TASKS.md`, section 12.
 
 The rules, limits, messages and endpoints are in `API.md`, section 19. This section explains **where the code lives**.
 
-### 16.1 Backend (Esmaeel, with Rami's scoring)
+### 16.1 Backend (Esmaeel, with Yazan's scoring)
 
 ```text
 api/src/integrity/
@@ -1346,7 +1346,7 @@ api/src/
 ├── tests/
 │   ├── copy.service.ts             owner: Majed      (copyTest / copyQuestion / copyProblem, also used by admin)
 │   └── copy.controller.ts          owner: Majed      (the three copy endpoints)
-├── cohort-students/                owner: Rami       (instructor manages students)
+├── cohort-students/                owner: Yazan       (instructor manages students)
 │   ├── cohort-students.module.ts   cohort-students.controller.ts   cohort-students.service.ts
 │   └── dto/
 ├── alerts/                         owner: Esmaeel
@@ -1640,9 +1640,9 @@ copyProblem(targetTestId: number, sourceProblemId: number): Promise<boolean>;
 | `AdminService` (Majed) | `listCities`, `createCity`, `listCohorts`, `createCohort`, `archiveCohort`, `regenerateJoinCode`, `listInstructors`, `createInstructor`, `updateInstructor`, `linkInstructor`, `unlinkInstructor` |
 | `CopyService` (Majed) | `copyTestContent(tx, sourceTestId, targetTestId)`, `copyQuestion(tx, sourceQuestionId, targetTestId)`, `copyProblem(tx, sourceProblemId, targetTestId)` |
 | `BankService` (Majed) | `list(query)`, `getDetail(testId, user)` |
-| `CohortStudentsService` (Rami) | `list(user, cohortId, query)`, `create(user, cohortId, dto)`, `update(user, userId, dto)`, `resetPassword(user, userId, dto)`, `signOut(user, userId)` |
+| `CohortStudentsService` (Yazan) | `list(user, cohortId, query)`, `create(user, cohortId, dto)`, `update(user, userId, dto)`, `resetPassword(user, userId, dto)`, `signOut(user, userId)` |
 
-Who calls whom (adds to 7.5): Majed's, Rami's and Esmaeel's instructor services call `CohortAccessService` first. Rami's `AttemptsService.start` calls `IntegrityService.issueSessionKey`. `IntegrityService` calls `AlertsService` and `ScoringService` inside the same transaction. `CohortStudentsService` and `AdminService` call `SessionService.revokeAll` when they disable an account or reset a password.
+Who calls whom (adds to 7.5): Majed's, Yazan's and Esmaeel's instructor services call `CohortAccessService` first. Yazan's `AttemptsService.start` calls `IntegrityService.issueSessionKey`. `IntegrityService` calls `AlertsService` and `ScoringService` inside the same transaction. `CohortStudentsService` and `AdminService` call `SessionService.revokeAll` when they disable an account or reset a password.
 
 ### 17.7 Where each Alpha rule is enforced (adds to 8)
 
@@ -1680,6 +1680,6 @@ Colors stay in `theme.css`: `DANGER` uses `--color-error`, `WARNING` uses `--col
 | Maya | `pages/instructor/Students/`, `pages/instructor/QuestionBank/`, `context/InstructorStudentsContext.tsx`, `context/QuestionBankContext.tsx`, `services/students.api.ts`, `services/bank.api.ts`, `types/students.types.ts`, `types/bank.types.ts` |
 | Esmaeel | `alerts/`, `auth/session.service.ts`, `common/cohort-access.service.ts`, `common/dto/pagination-query.dto.ts`, migration `alpha_cohorts` |
 | Majed | `admin/`, `bank/`, `tests/copy.service.ts`, `tests/copy.controller.ts` |
-| Rami | `cohort-students/` |
+| Yazan | `cohort-students/` |
 
 **Exception to 12:** `pages/instructor/` belongs to Ali **except** `pages/instructor/Students/` and `pages/instructor/QuestionBank/`, which belong to Maya. `CODEOWNERS` is updated in the same PR as this section.
